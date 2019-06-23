@@ -29,8 +29,14 @@ class WGCApplication():
     def GetName(self):
         return self._metadata.find('shortcut_name').text
 
+    def GetMutexName(self):
+        return self._metadata.find('mutex_name').text
+
     def IsInstalled(self):
         return bool(self._gameinfo.find('game/installed').text)
+
+    def IsRunning(self):
+        return helper.is_mutex_exists(self.GetMutexName())
 
     def GetExecutableName(self):
         return self._metadata.find('executable_name').text
@@ -50,10 +56,8 @@ class WGC():
     WGC_EXECUTABLE_NAME = 'WGC.exe'
 
     def __init__(self):
-        self._games = dict()
-        self.ScanGames()
         pass
-    
+
     def IsInstalled(self):
         return self.GetWgcDirectory() != None
 
@@ -74,8 +78,8 @@ class WGC():
 
         return None
 
-    def ScanGames(self):
-        self._games.clear()
+    def GetGames(self):
+        games = dict()
 
         if not self.IsInstalled():
             return None
@@ -91,18 +95,7 @@ class WGC():
                 app_path = file_content.read()
 
             app = WGCApplication(app_path)
-            self._games[app.GetId()] = app
+            games[app.GetId()] = app
 
-    def GetInstalledGames(self):
-        return self._games.values()
-
-    def GetGame(self, game_id):
-        if game_id in self._games:
-            return self._games[game_id]
-  
-        return None
-
-    def UninstallGame(self):
-        #TODO: <GAME_DIR>/wgc_api.exe --uninstall
-        pass
+        return games
 
