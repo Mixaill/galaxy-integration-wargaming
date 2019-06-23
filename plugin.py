@@ -40,7 +40,9 @@ class WargamingPlugin(Plugin):
         pass
 
     async def uninstall_game(self, game_id):
-        pass
+        game = self._backend_localgames.GetWgcGame(game_id)
+        if game is not None:
+            game.UninstallGame()
 
     def tick(self):
         self._backend_localgames.tick()

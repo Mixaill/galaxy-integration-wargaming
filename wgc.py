@@ -8,6 +8,7 @@ class WGCApplication():
     DETACHED_PROCESS = 0x00000008
     INFO_FILE = 'game_info.xml'
     METADATA_FILE = 'game_metadata\\metadata.xml'
+    WGCAPI_FILE = 'wgc_api.exe'
 
     def __init__(self, folder):
         self._folder = folder
@@ -35,6 +36,9 @@ class WGCApplication():
     def IsInstalled(self):
         return bool(self._gameinfo.find('game/installed').text)
 
+    def GetGameFolder(self):
+        return self._folder
+
     def IsRunning(self):
         return helper.is_mutex_exists(self.GetMutexName())
 
@@ -42,11 +46,16 @@ class WGCApplication():
         return self._metadata.find('executable_name').text
 
     def GetExecutablePath(self):
-        return os.path.join(self._folder, self.GetExecutableName())
+        return os.path.join(self.GetGameFolder(), self.GetExecutableName())
+
+    def GetWgcapiPath(self):
+        return os.path.join(self.GetGameFolder(), self.WGCAPI_FILE)
 
     def RunExecutable(self):
         subprocess.Popen([self.GetExecutablePath()], creationflags=self.DETACHED_PROCESS)
 
+    def UninstallGame(self):
+        subprocess.Popen([self.GetWgcapiPath(), '--uninstall'], creationflags=self.DETACHED_PROCESS, cwd = self.GetGameFolder())
 
 
 class WGC():

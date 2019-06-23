@@ -1,6 +1,8 @@
 import ctypes
 import os
 
+### Mutex
+
 SYNCHRONIZE = 0x00100000
 MUTANT_QUERY_STATE = 0x0001
 STANDARD_RIGHTS_REQUIRED = 0x000F0000
@@ -15,6 +17,7 @@ def is_mutex_exists(mutex_name):
 
     return False
 
+### FS
 
 def scantree(path):
     """Recursively yield DirEntry objects for given directory."""
