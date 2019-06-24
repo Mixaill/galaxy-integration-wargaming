@@ -1,4 +1,11 @@
+import logging
+import os
 import sys
+
+#expand sys.path
+thirdparty =  os.path.join(os.path.dirname(os.path.realpath(__file__)),'3rdparty\\')
+if thirdparty not in sys.path:
+    sys.path.insert(0, thirdparty)
 
 from galaxy.api.consts import Platform
 from galaxy.api.plugin import Plugin, create_and_run_plugin
@@ -11,6 +18,7 @@ from wgc import WGC
 class WargamingPlugin(Plugin):
     def __init__(self, reader, writer, token):
         super().__init__(Platform.Wargaming, __version__, reader, writer, token)
+
         self._backend_wgc = WGC()
         self._backend_localgames = LocalGames(self)
 
@@ -49,7 +57,6 @@ class WargamingPlugin(Plugin):
 
 def main():
     create_and_run_plugin(WargamingPlugin, sys.argv)
-
 
 if __name__ == "__main__":
     main()
