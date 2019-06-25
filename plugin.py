@@ -8,8 +8,9 @@ if thirdparty not in sys.path:
     sys.path.insert(0, thirdparty)
 
 from galaxy.api.consts import Platform
+from galaxy.api.errors import InvalidCredentials
 from galaxy.api.plugin import Plugin, create_and_run_plugin
-from galaxy.api.types import Authentication, Game, LicenseInfo, LicenseType, LocalGame, LocalGameState
+from galaxy.api.types import Authentication, Game, LicenseInfo, LicenseType, LocalGame, LocalGameState, NextStep
 
 from localgames import LocalGames
 from version import __version__
@@ -23,10 +24,39 @@ class WargamingPlugin(Plugin):
         self._backend_localgames = LocalGames(self)
 
     async def authenticate(self, stored_credentials=None):
-        return Authentication(1,"TestUser")
+        backend_auth = self._backend_wgc.GetAuthorizationBackend()
+
+        if not stored_credentials:
+            logging.info('No stored credentials')
+
+            AUTH_PARAMS = {
+                "window_title": "Login to Wargaming",
+                "window_width": 640,
+                "window_height": 460,
+                "start_uri": 'http://%s:%s/login' % (backend_auth.LOCALSERVER_HOST, backend_auth.LOCALSERVER_PORT),
+                "end_uri_regex": '.*finished'
+            }
+            backend_auth.auth_server_start()
+            return NextStep("web_session", AUTH_PARAMS)
+
+        else:
+            auth_passed = backend_auth.login_info_set(stored_credentials)
+            if not auth_passed:
+                logging.warning('Stored credentials are invalid')
+                raise InvalidCredentials()
+            
+            return Authentication(backend_auth.get_account_id(), backend_auth.get_account_email())
 
     async def pass_login_credentials(self, step, credentials, cookies):
-        return Authentication(1,"TestUser")
+        backend_auth = self._backend_wgc.GetAuthorizationBackend()
+        backend_auth.auth_server_stop()
+
+        login_info = backend_auth.login_info_get()
+        if not login_info:
+            logging.error('Login info is None!')
+
+        self.store_credentials(login_info)
+        return Authentication(backend_auth.get_account_id(), backend_auth.get_account_email())
 
     async def get_local_games(self):
         return self._backend_localgames.get_local_games()

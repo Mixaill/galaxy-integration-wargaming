@@ -3,6 +3,7 @@ import subprocess
 import xml.etree.ElementTree as ET
 
 import helper
+from wgc_auth import WGCAuthorization
 
 class WGCApplication():
     DETACHED_PROCESS = 0x00000008
@@ -61,14 +62,19 @@ class WGCApplication():
 class WGC():
     WGC_PROGRAMDATA_DIR = 'Wargaming.net\\GameCenter\\'
     WGC_PATH_FILE = 'Wargaming.net\\GameCenter\\data\\wgc_path.dat'
+    WGC_TRACKING_FILE = 'Wargaming.net\\GameCenter\\data\\wgc_tracking_id.dat'
     WGC_APPSLOCATION_DIR = 'Wargaming.net\\GameCenter\\apps\\'
     WGC_EXECUTABLE_NAME = 'WGC.exe'
 
     def __init__(self):
+        self._backend_authorization = WGCAuthorization(self.GetTrackingId())
         pass
 
     def IsInstalled(self):
         return self.GetWgcDirectory() != None
+
+    def GetAuthorizationBackend(self):
+        return self._backend_authorization
 
     def GetWgcDirectory(self):
         #try to use path from wgc_path.data
@@ -86,6 +92,16 @@ class WGC():
             return wgc_programdata_dir
 
         return None
+
+    def GetTrackingId(self):
+        tracking_id = ''
+
+        wgc_tracking_file = os.path.join(os.getenv('PROGRAMDATA'), self.WGC_TRACKING_FILE)
+        if os.path.exists(wgc_tracking_file):
+            with open(wgc_tracking_file, 'r') as file_content:
+                tracking_id = file_content.read()
+
+        return tracking_id
 
     def GetGames(self):
         games = dict()

@@ -7,6 +7,9 @@ GOG Galaxy 2.0 Wargaming Game Center integration
 
 ## Changelog
 
+* v. 0.4.0
+   * implemented Wargaming.net authorization
+
 * v. 0.3.0
    * add ability to delete games
 
