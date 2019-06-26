@@ -265,7 +265,8 @@ class WGCAuthorization:
     def __oauth_challenge_get(self, realm):
         r = self._session.get(self.__get_url('wgnet', realm, self.OUATH_URL_CHALLENGE))
         if r.status_code != 200:
-           return None
+            logging.error('wgc_auth/oauth_challenge_get: error %s, content: %s' % (r.status_code, r.text))
+            return None
 
         return json.loads(r.text)['pow']
         
@@ -306,10 +307,12 @@ class WGCAuthorization:
 
         r = self._session.post(self.__get_url('wgnet', realm, self.OAUTH_URL_TOKEN), data = body)
         if r.status_code != 202:
+            logging.error('wgc_auth/oauth_token_get_bypassword: error 1-%s, content: %s' % (r.status_code, r.text))
             return None
 
         r2 = self._session.get(r.headers['Location'])
         if r2.status_code != 200:
+            logging.error('wgc_auth/oauth_token_get_bypassword: error 2-%s, content: %s' % (r2.status_code, r2.text))
             return None
 
         return json.loads(r2.text)
