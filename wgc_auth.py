@@ -1,7 +1,11 @@
+DEBUG = False
+
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import logging
 import json
 import os
+import random
+import string
 import sys
 import pprint
 import threading
@@ -42,10 +46,13 @@ class WGCAuthorizationServer(BaseHTTPRequestHandler):
         auth_result = False
 
         if data_valid:
-            auth_result = self.backend.do_auth(
-                data[b'realm'][0].decode("utf-8"),
-                data[b'email'][0].decode("utf-8"),
-                data[b'password'][0].decode("utf-8"))
+            try:
+                auth_result = self.backend.do_auth(
+                    data[b'realm'][0].decode("utf-8"),
+                    data[b'email'][0].decode("utf-8"),
+                    data[b'password'][0].decode("utf-8"))
+            except Exception:
+                logging.exception("error on doing auth:")
  
         self.send_response(302)
         self.send_header('Content-type', "text/html")
@@ -77,8 +84,6 @@ class WGCAuthorizationServer(BaseHTTPRequestHandler):
 class WGCAuthorization:
     HTTP_USER_AGENT = 'wgc/19.03.00.5220'
 
-    OAUTH_CLIENT_ID = '77cxLwtEJ9uvlcm2sYe4O8viIIWn1FEWlooMTTqF'
-    OAUTH_EXCHANGE_CODE = 'E6F15EBD8EC89D29DB79534D0F15EE4C'
     OAUTH_GRANT_TYPE_BYPASSWORD = 'urn:wargaming:params:oauth:grant-type:basic'
     OAUTH_GRANT_TYPE_BYTOKEN = 'urn:wargaming:params:oauth:grant-type:access-token'
     OUATH_URL_CHALLENGE = '/id/api/v2/account/credentials/create/oauth/token/challenge/'
@@ -98,6 +103,8 @@ class WGCAuthorization:
 
         self._session = requests.Session()
         self._session.headers.update({'User-Agent': self.HTTP_USER_AGENT})
+        if DEBUG:
+            self._session.verify = False
 
     # 
     # Getters
@@ -232,6 +239,19 @@ class WGCAuthorization:
     # URL formatting
     #
 
+    def __get_oauth_clientid(self, realm):
+        if realm == 'RU':
+            return '77cxLwtEJ9uvlcm2sYe4O8viIIWn1FEWlooMTTqF'
+        if realm == 'EU':
+            return 'JJ5yuABVKqZekaktUR8cejMzxbbHAtUVmY2eamsS'
+        if realm == 'NA':
+            return 'AJ5PLrEuz5C2d0hHmmjQJtjaMpueSahYY8CiswHE'
+        if realm == 'ASIA':
+            return 'Xe2oDM8Z6A4N70VZIV8RyVLHpvdtVPYNRIIYBklJ'
+        
+        logging.error('wgc_auth/get_oauth_clientid: unknown realm')
+        return None
+
     def __get_url(self, ltype, realm, url):
         realm = realm.upper()
 
@@ -301,28 +321,26 @@ class WGCAuthorization:
         body['username'] = email
         body['password'] = password
         body['grant_type'] = self.OAUTH_GRANT_TYPE_BYPASSWORD
-        body['client_id'] = self.OAUTH_CLIENT_ID
+        body['client_id'] = self.__get_oauth_clientid(realm)
         body['tid'] = self._tracking_id
         body['pow'] = pow_number
 
-        r = self._session.post(self.__get_url('wgnet', realm, self.OAUTH_URL_TOKEN), data = body)
-        if r.status_code != 202:
-            logging.error('wgc_auth/oauth_token_get_bypassword: error 1-%s, content: %s' % (r.status_code, r.text))
+        response = self._session.post(self.__get_url('wgnet', realm, self.OAUTH_URL_TOKEN), data = body)
+        while response.status_code == 202:
+            response = self._session.get(response.headers['Location'])
+        
+        if response.status_code != 200:
+            logging.error('wgc_auth/oauth_token_get_bypassword: location: %s error %s, content: %s' % (response.url, response.status_code, response.text))
             return None
 
-        r2 = self._session.get(r.headers['Location'])
-        if r2.status_code != 200:
-            logging.error('wgc_auth/oauth_token_get_bypassword: error 2-%s, content: %s' % (r2.status_code, r2.text))
-            return None
-
-        return json.loads(r2.text)
+        return json.loads(response.text)
 
     def __oauth_token_get_bytoken(self, realm, token_data):
         body = dict()
         body['access_token'] = token_data['access_token']
         body['grant_type'] = self.OAUTH_GRANT_TYPE_BYTOKEN
-        body['client_id'] = self.OAUTH_CLIENT_ID
-        body['exchange_code'] = self.OAUTH_EXCHANGE_CODE
+        body['client_id'] = self.__get_oauth_clientid(realm)
+        body['exchange_code'] = ''.join(random.choices(string.digits, k=32))
         body['tid'] = self._tracking_id
 
         r = self._session.post(self.__get_url('wgnet', realm, self.OAUTH_URL_TOKEN), data = body)

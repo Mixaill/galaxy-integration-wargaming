@@ -7,6 +7,10 @@ GOG Galaxy 2.0 Wargaming Game Center integration
 
 ## Changelog
 
+* v. 0.4.1
+   * fixed Wargaming.net authorization on non-RU realms
+   * added additional authorization logging
+
 * v. 0.4.0
    * implemented Wargaming.net authorization
 
