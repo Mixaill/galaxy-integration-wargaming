@@ -1,5 +1,6 @@
 DEBUG = False
 
+from enum import Enum
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import logging
 import json
@@ -20,6 +21,13 @@ if thirdparty not in sys.path:
 from Crypto.Hash import keccak
 import requests
 
+class WGCAuthorizationResult(Enum):
+    UNKNOWN = 0
+    FAILED = 1
+    FINISHED = 2
+    REQUIRES_2FA = 3
+    INCORRECT_2FA = 4
+
 class WGCAuthorizationServer(BaseHTTPRequestHandler):
     backend = None
 
@@ -27,19 +35,29 @@ class WGCAuthorizationServer(BaseHTTPRequestHandler):
         return
 
     def do_POST(self):
-        #get post data
         content_length = int(self.headers['Content-Length'])
         post_data = self.rfile.read(content_length)
-            
-        data = parse_qs(post_data)
-        data_valid = True
+        try:       
+            post_data = parse_qs(post_data)
+        except:
+            pass
 
+        if self.path == '/login':
+            self.do_POST_login(post_data)
+        elif self.path == '/2fa':
+            self.do_POST_2fa(post_data)
+        else:
+            self.send_response(302)
+            self.send_header('Location','/404')
+            self.end_headers()
+
+    def do_POST_login(self, data):
+
+        data_valid = True
         if b'realm' not in data:
             data_valid = False
-
         if b'email' not in data:
             data_valid = False
-
         if b'password' not in data:
             data_valid = False
 
@@ -47,7 +65,7 @@ class WGCAuthorizationServer(BaseHTTPRequestHandler):
 
         if data_valid:
             try:
-                auth_result = self.backend.do_auth(
+                auth_result = self.backend.do_auth_emailpass(
                     data[b'realm'][0].decode("utf-8"),
                     data[b'email'][0].decode("utf-8"),
                     data[b'password'][0].decode("utf-8"))
@@ -56,12 +74,43 @@ class WGCAuthorizationServer(BaseHTTPRequestHandler):
  
         self.send_response(302)
         self.send_header('Content-type', "text/html")
-        if auth_result:
+        if auth_result == WGCAuthorizationResult.FINISHED:
             self.send_header('Location','/finished')
+        elif auth_result == WGCAuthorizationResult.REQUIRES_2FA:
+            self.send_header('Location','/2fa')
         else:
             self.send_header('Location','/login_failed')
 
         self.end_headers()
+
+
+    def do_POST_2fa(self, data):
+        data_valid = True
+
+        if b'authcode' not in data:
+            data_valid = False
+        auth_result = False
+
+        if data_valid:
+            try:
+                auth_result = self.backend.do_auth_2fa(data[b'authcode'][0].decode("utf-8"))
+            except Exception:
+                logging.exception("error on doing auth:")
+ 
+        self.send_response(302)
+
+        self.send_header('Content-type', "text/html")
+        if auth_result == WGCAuthorizationResult.FINISHED:
+            self.send_header('Location','/finished')
+        elif auth_result == WGCAuthorizationResult.REQUIRES_2FA:
+            self.send_header('Location','/2fa')
+        elif auth_result == WGCAuthorizationResult.INCORRECT_2FA:
+            self.send_header('Location','/2fa_failed')
+        else:
+            self.send_header('Location','/login_failed')
+
+        self.end_headers()
+
 
     def do_GET(self):
         status = 200
@@ -101,6 +150,7 @@ class WGCAuthorization:
         self._server_object = None
 
         self._login_info = None
+        self._login_info_temp = None
 
         self._session = requests.Session()
         self._session.headers.update({'User-Agent': self.HTTP_USER_AGENT})
@@ -228,7 +278,7 @@ class WGCAuthorization:
         self._login_info = login_info
         self.__update_bearer()
 
-        wgni_account_info = __wgni_get_account_info()
+        wgni_account_info = self.__wgni_get_account_info()
 
         if wgni_account_info is None:
             logging.error('wgc_auth/login_info_set: failed to get account info')
@@ -244,31 +294,91 @@ class WGCAuthorization:
     # Authorization routine
     # 
 
-    def do_auth(self, realm, email, password):
+    def do_auth_emailpass(self, realm, email, password) -> WGCAuthorizationResult:
+        '''
+        Perform authorization using email and password
+        '''
 
         self._session.cookies.clear()
+        self._login_info_temp = {'realm': realm, 'email': email, 'password': password}
 
         challenge_data = self.__oauth_challenge_get(realm)
         if not challenge_data:
             logging.error('Failed to get challenge')
-            return False
+            return WGCAuthorizationResult.FAILED
 
+        #calculate proof of work
         pow_number = self.__oauth_challenge_calculate(challenge_data)
         if not pow_number:
             logging.error('Failed to calculate challenge')
-            return False
+            return WGCAuthorizationResult.FAILED
+        self._login_info_temp['pow_number'] = pow_number
 
+        #try to get token
         token_data_bypassword = self.__oauth_token_get_bypassword(realm, email, password, pow_number)
-        if not token_data_bypassword:
-            logging.error('Failed to request token by email and password')
-            return False
+        if token_data_bypassword['status_code'] != 200:
+            if 'error_description' in token_data_bypassword and token_data_bypassword['error_description'] == 'twofactor_required':
+                self._login_info_temp['twofactor_token'] = token_data_bypassword['twofactor_token']
+                return WGCAuthorizationResult.REQUIRES_2FA
+            else:
+                logging.error('Failed to request token by email and password')
+                return WGCAuthorizationResult.FAILED
 
-        token_data_bytoken = self.__oauth_token_get_bytoken(realm, token_data_bypassword)
+        return self.do_auth_token(realm, email, token_data_bypassword)
+
+
+    def do_auth_2fa(self, otp_code) -> WGCAuthorizationResult:
+        '''
+        Submits 2FA answer and continue authorization
+        '''
+
+        if 'realm' not in self._login_info_temp:
+            logging.error('wgc_auth/do_auth_2fa: realm not in stored data')
+            return WGCAuthorizationResult.FAILED
+
+        if 'email' not in self._login_info_temp:
+            logging.error('wgc_auth/do_auth_2fa: email not in stored data')
+            return WGCAuthorizationResult.FAILED
+
+        if 'password' not in self._login_info_temp:
+            logging.error('wgc_auth/do_auth_2fa: password not in stored data')
+            return WGCAuthorizationResult.FAILED
+
+        if 'pow_number' not in self._login_info_temp:
+            logging.error('wgc_auth/do_auth_2fa: pow number not in stored data')
+            return WGCAuthorizationResult.FAILED
+
+        if 'twofactor_token' not in self._login_info_temp:
+            logging.error('wgc_auth/do_auth_2fa: twofactor token not in stored data')
+            return WGCAuthorizationResult.FAILED
+
+        token_data_byotp = self.__oauth_token_get_bypassword(
+            self._login_info_temp['realm'],
+            self._login_info_temp['email'],
+            self._login_info_temp['password'],
+            self._login_info_temp['pow_number'],
+            self._login_info_temp['twofactor_token'],
+            otp_code)
+
+        if token_data_byotp['status_code'] != 200:
+            if 'error_description' in token_data_byotp and token_data_byotp['error_description'] == 'twofactor_invalid':
+                return WGCAuthorizationResult.INCORRECT_2FA
+            else:
+                logging.error('wgc_auth/do_auth_2fa: failed to request token by email, password and OTP')
+                return WGCAuthorizationResult.FAILED
+
+        return self.do_auth_token(self._login_info_temp['realm'], self._login_info_temp['email'], token_data_byotp)
+
+
+    def do_auth_token(self, realm, email, token_data_input) -> WGCAuthorizationResult:
+        '''
+        Second step of authorization in case if you already logged in via emailpass or 2FA
+        '''
+
+        token_data_bytoken = self.__oauth_token_get_bytoken(realm, token_data_input)
         if not token_data_bytoken:
-            logging.error('Failed to request token by token')
-            return False
-
-        self._session.cookies.clear()
+            logging.error('wgc_auth/do_auth_token: failed to request token by token')
+            return WGCAuthorizationResult.FAILED
         
         #generate login info
         login_info = dict()
@@ -287,7 +397,8 @@ class WGCAuthorization:
         logging.info(wgni_account_info)
         self._login_info['nickname'] = wgni_account_info['nickname']
 
-        return True
+        return WGCAuthorizationResult.FINISHED
+
 
     def __update_bearer(self):
         if self._login_info is None:
@@ -385,7 +496,7 @@ class WGCAuthorization:
 
             pow_number = pow_number + 1
 
-    def __oauth_token_get_bypassword(self, realm, email, password, pow_number):
+    def __oauth_token_get_bypassword(self, realm, email, password, pow_number, twofactor_token = None, otp_code = None):
         body = dict()
         body['username'] = email
         body['password'] = password
@@ -393,16 +504,24 @@ class WGCAuthorization:
         body['client_id'] = self.__get_oauth_clientid(realm)
         body['tid'] = self._tracking_id
         body['pow'] = pow_number
+        if twofactor_token is not None:
+            body['twofactor_token'] = twofactor_token
+        if otp_code is not None:
+            body['otp_code'] = otp_code
 
         response = self._session.post(self.__get_url('wgnet', realm, self.OAUTH_URL_TOKEN), data = body)
         while response.status_code == 202:
             response = self._session.get(response.headers['Location'])
         
-        if response.status_code != 200:
-            logging.error('wgc_auth/oauth_token_get_bypassword: location: %s error %s, content: %s' % (response.url, response.status_code, response.text))
+        text = None
+        try:
+            text = json.loads(response.text)
+        except Exception:
+            logging.exception('wgc_auth/oauth_token_get_bypassword: failed to parse response')
             return None
 
-        return json.loads(response.text)
+        text['status_code'] = response.status_code
+        return text
 
     def __oauth_token_get_bytoken(self, realm, token_data):
         body = dict()

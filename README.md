@@ -7,6 +7,10 @@ GOG Galaxy 2.0 Wargaming Game Center integration
 
 ## Changelog
 
+* v. 0.4.3
+   * implemented two factor authorization
+   * Galaxy SDK updated to 0.38
+
 * v. 0.4.2
    * changed nickname format from `<email>` to `<realm>_<nickname>`
 
