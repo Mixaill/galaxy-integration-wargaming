@@ -88,6 +88,7 @@ class WGCAuthorization:
     OAUTH_GRANT_TYPE_BYTOKEN = 'urn:wargaming:params:oauth:grant-type:access-token'
     OUATH_URL_CHALLENGE = '/id/api/v2/account/credentials/create/oauth/token/challenge/'
     OAUTH_URL_TOKEN = '/id/api/v2/account/credentials/create/oauth/token/'
+    WGNI_URL_ACCOUNTINFO = '/id/api/v2/account/info/'
 
     WGCPS_LOGINSESSION = '/auth/api/v1/loginSession'
 
@@ -131,6 +132,29 @@ class WGCAuthorization:
             return None
 
         return self._login_info['email']
+
+    def get_account_nickname(self):
+        if self._login_info is None:
+            logging.error('login info is none')
+            return None
+
+        if 'nickname' not in self._login_info:
+            logging.error('login info does not contains nickname')
+            return None
+
+        return self._login_info['nickname']
+
+        
+    def get_account_realm(self):
+        if self._login_info is None:
+            logging.error('login info is none')
+            return None
+
+        if 'realm' not in self._login_info:
+            logging.error('login info does not contains realm')
+            return None
+
+        return self._login_info['realm']
 
     #
     # Authorization server
@@ -176,34 +200,53 @@ class WGCAuthorization:
         return self._login_info
 
     def login_info_set(self, login_info):
+
+        if login_info is None:
+            logging.error('wgc_auth/login_info_set: login info is none')
+            return False
+
         if 'realm' not in login_info:
+            logging.error('wgc_auth/login_info_set: realm is missing')
             return False
 
         if 'access_token' not in login_info:
+            logging.error('wgc_auth/login_info_set: access token is missing')
+            return False
+
+        if 'exchange_code' not in login_info:
+            logging.error('wgc_auth/login_info_set: exchange code is missing')
             return False
 
         if 'email' not in login_info:
+            logging.error('wgc_auth/login_info_set: email')
             return False
 
         if 'user' not in login_info:
+            logging.error('wgc_auth/login_info_set: user is missing')
             return False
 
-        r = self._session.get(self.__get_url('wgcps', login_info['realm'], self.WGCPS_LOGINSESSION), headers = {'Authorization':'Bearer %s' % login_info['access_token']})
-        if r.status_code != 200:
+        self._login_info = login_info
+        self.__update_bearer()
+
+        wgni_account_info = __wgni_get_account_info()
+
+        if wgni_account_info is None:
+            logging.error('wgc_auth/login_info_set: failed to get account info')
             return False
 
-        rj = json.loads(r.text)
-        if rj['status'] == 'ok':
-            self._login_info = login_info
-            return True
-
-        return False
+        if wgni_account_info['sub'] != login_info['user']:
+            logging.error('wgc_auth/login_info_set: SPA ID missmatch')
+            return False
+        
+        return True
 
     #
     # Authorization routine
     # 
 
     def do_auth(self, realm, email, password):
+
+        self._session.cookies.clear()
 
         challenge_data = self.__oauth_challenge_get(realm)
         if not challenge_data:
@@ -225,15 +268,41 @@ class WGCAuthorization:
             logging.error('Failed to request token by token')
             return False
 
+        self._session.cookies.clear()
+        
         #generate login info
         login_info = dict()
         login_info['realm'] = realm
         login_info['email'] = email
         login_info['user'] = token_data_bytoken['user']
         login_info['access_token'] = token_data_bytoken['access_token']
+        login_info['exchange_code'] = token_data_bytoken['exchange_code']
         self._login_info = login_info
 
+        #update bearer
+        self.__update_bearer()
+
+        #get additinal info from WGNI
+        wgni_account_info = self.__wgni_get_account_info()
+        logging.info(wgni_account_info)
+        self._login_info['nickname'] = wgni_account_info['nickname']
+
         return True
+
+    def __update_bearer(self):
+        if self._login_info is None:
+            logging.error('wgc_auth/update_bearer: login info is none')
+            return None
+
+        if 'access_token' not in self._login_info:
+            logging.error('wgc_auth/update_bearer: login info does not contain access token')
+            return None
+
+        if 'exchange_code' not in self._login_info:
+            logging.error('wgc_auth/update_bearer: login info does not contain exchange code')
+            return None
+
+        self._session.headers.update({'Authorization':'Bearer %s:%s' % (self._login_info['access_token'], self._login_info['exchange_code'])})
 
     #
     # URL formatting
@@ -340,7 +409,7 @@ class WGCAuthorization:
         body['access_token'] = token_data['access_token']
         body['grant_type'] = self.OAUTH_GRANT_TYPE_BYTOKEN
         body['client_id'] = self.__get_oauth_clientid(realm)
-        body['exchange_code'] = ''.join(random.choices(string.digits, k=32))
+        body['exchange_code'] = ''.join(random.choices(string.digits+'ABCDEF', k=32))
         body['tid'] = self._tracking_id
 
         r = self._session.post(self.__get_url('wgnet', realm, self.OAUTH_URL_TOKEN), data = body)
@@ -351,5 +420,34 @@ class WGCAuthorization:
         if r2.status_code != 200:
             return None
 
-        return json.loads(r2.text)
+        result = json.loads(r2.text)
+        result['exchange_code'] = body['exchange_code']
+
+        return result
+
+    #
+    # Account info
+    #
+
+    def __wgni_get_account_info(self):
+        if self._login_info is None:
+            logging.error('wgc_auth/wgni_get_account_info: login info is none')
+            return None
+
+        if 'realm' not in self._login_info:
+            logging.error('wgc_auth/wgni_get_account_info: login info does not contain realm')
+            return None
+
+        response = self._session.post(
+            self.__get_url('wgnet', self._login_info['realm'], self.WGNI_URL_ACCOUNTINFO), 
+            data = { 'fields' : 'nickname' })
+      
+        while response.status_code == 202:
+            response = self._session.get(response.headers['Location'])
+        
+        if response.status_code != 200:
+            logging.error('wgc_auth/wgni_get_account_info: error on retrieving account info: %s' % response.text)
+            return None
+
+        return json.loads(response.text)
 

@@ -7,6 +7,9 @@ GOG Galaxy 2.0 Wargaming Game Center integration
 
 ## Changelog
 
+* v. 0.4.2
+   * changed nickname format from `<email>` to `<realm>_<nickname>`
+
 * v. 0.4.1
    * fixed Wargaming.net authorization on non-RU realms
    * added additional authorization logging

@@ -45,7 +45,7 @@ class WargamingPlugin(Plugin):
                 logging.warning('Stored credentials are invalid')
                 raise InvalidCredentials()
             
-            return Authentication(backend_auth.get_account_id(), backend_auth.get_account_email())
+            return Authentication(backend_auth.get_account_id(), backend_auth.get_account_realm()+'_'+backend_auth.get_account_nickname())
 
     async def pass_login_credentials(self, step, credentials, cookies):
         backend_auth = self._backend_wgc.GetAuthorizationBackend()
@@ -56,7 +56,7 @@ class WargamingPlugin(Plugin):
             logging.error('Login info is None!')
 
         self.store_credentials(login_info)
-        return Authentication(backend_auth.get_account_id(), backend_auth.get_account_email())
+        return Authentication(backend_auth.get_account_id(), backend_auth.get_account_realm()+'_'+backend_auth.get_account_nickname())
 
     async def get_local_games(self):
         return self._backend_localgames.get_local_games()
