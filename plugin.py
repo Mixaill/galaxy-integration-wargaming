@@ -7,13 +7,21 @@ thirdparty =  os.path.join(os.path.dirname(os.path.realpath(__file__)),'3rdparty
 if thirdparty not in sys.path:
     sys.path.insert(0, thirdparty)
 
+from version import __version__
+
+#Start sentry
+import sentry_sdk
+sentry_sdk.init(
+    "https://965fd62de6974b1c8301b794a426238d@sentry.openwg.net/2",
+    release=("galaxy-integration-wargaming@%s" % __version__))
+
 from galaxy.api.consts import Platform
 from galaxy.api.errors import InvalidCredentials
 from galaxy.api.plugin import Plugin, create_and_run_plugin
 from galaxy.api.types import Authentication, Game, LicenseInfo, LicenseType, LocalGame, LocalGameState, NextStep
 
 from localgames import LocalGames
-from version import __version__
+
 from wgc import WGC
 
 class WargamingPlugin(Plugin):
