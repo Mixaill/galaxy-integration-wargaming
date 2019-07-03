@@ -7,6 +7,11 @@ GOG Galaxy 2.0 Wargaming Game Center integration
 
 ## Changelog
 
+* v. 0.4.4
+   * Galaxy SDK updated to 0.40.1
+   * Fixed exception when there is no installed games
+   * Added error logging via Sentry
+
 * v. 0.4.3
    * implemented two factor authorization
    * Galaxy SDK updated to 0.38
