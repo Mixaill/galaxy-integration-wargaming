@@ -107,11 +107,11 @@ class WGC():
         games = dict()
 
         if not self.IsInstalled():
-            return None
+            return games
 
         appslocation_dir = os.path.join(os.getenv('PROGRAMDATA'), self.WGC_APPSLOCATION_DIR)
         if not os.path.exists(appslocation_dir):
-            return None
+            return games
 
         app_files = [item.path for item in helper.scantree(appslocation_dir) if item.is_file() ]
         for app_file in app_files:
