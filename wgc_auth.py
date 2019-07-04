@@ -27,6 +27,7 @@ class WGCAuthorizationResult(Enum):
     FINISHED = 2
     REQUIRES_2FA = 3
     INCORRECT_2FA = 4
+    INVALID_LOGINPASS = 5
 
 class WGCAuthorizationServer(BaseHTTPRequestHandler):
     backend = None
@@ -310,19 +311,24 @@ class WGCAuthorization:
         #calculate proof of work
         pow_number = self.__oauth_challenge_calculate(challenge_data)
         if not pow_number:
-            logging.error('Failed to calculate challenge')
+            logging.error('wgc_auth/do_auth_emailpass: failed to calculate challenge')
             return WGCAuthorizationResult.FAILED
         self._login_info_temp['pow_number'] = pow_number
 
         #try to get token
         token_data_bypassword = self.__oauth_token_get_bypassword(realm, email, password, pow_number)
+
+        #process error
         if token_data_bypassword['status_code'] != 200:
-            if 'error_description' in token_data_bypassword and token_data_bypassword['error_description'] == 'twofactor_required':
-                self._login_info_temp['twofactor_token'] = token_data_bypassword['twofactor_token']
-                return WGCAuthorizationResult.REQUIRES_2FA
-            else:
-                logging.error('Failed to request token by email and password')
-                return WGCAuthorizationResult.FAILED
+            if 'error_description' in token_data_bypassword:
+                if token_data_bypassword['error_description'] == 'twofactor_required':
+                    self._login_info_temp['twofactor_token'] = token_data_bypassword['twofactor_token']
+                    return WGCAuthorizationResult.REQUIRES_2FA
+                elif token_data_bypassword['error_description'] == 'Invalid password parameter value.':
+                    return WGCAuthorizationResult.INVALID_LOGINPASS
+            
+            logging.error('wgc_auth/do_auth_emailpass: failed to request token by email and password: %s' % token_data_bypassword)
+            return WGCAuthorizationResult.FAILED
 
         return self.do_auth_token(realm, email, token_data_bypassword)
 
@@ -360,12 +366,15 @@ class WGCAuthorization:
             self._login_info_temp['twofactor_token'],
             otp_code)
 
+        # process error
         if token_data_byotp['status_code'] != 200:
-            if 'error_description' in token_data_byotp and token_data_byotp['error_description'] == 'twofactor_invalid':
-                return WGCAuthorizationResult.INCORRECT_2FA
-            else:
-                logging.error('wgc_auth/do_auth_2fa: failed to request token by email, password and OTP')
-                return WGCAuthorizationResult.FAILED
+            if 'error_description' in token_data_byotp:
+                error_desc = token_data_byotp['error_description'] 
+                if error_desc == 'twofactor_invalid' or error_desc == 'Invalid otp_code parameter value.':
+                    return WGCAuthorizationResult.INCORRECT_2FA
+            
+            logging.error('wgc_auth/do_auth_2fa: failed to request token by email, password and OTP: %s' % token_data_byotp)
+            return WGCAuthorizationResult.FAILED
 
         return self.do_auth_token(self._login_info_temp['realm'], self._login_info_temp['email'], token_data_byotp)
 
