@@ -7,6 +7,9 @@ GOG Galaxy 2.0 Wargaming Game Center integration
 
 ## Changelog
 
+* v. 0.4.5
+   * Improve Wargaming.net authorization error processing
+
 * v. 0.4.4
    * Galaxy SDK updated to 0.40.1
    * Fixed exception when there is no installed games

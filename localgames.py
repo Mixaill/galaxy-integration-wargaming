@@ -6,10 +6,11 @@ from galaxy.api.types import LocalGame, LocalGameState
 class LocalGames():
     LOCAL_GAMES_CACHE_VALID_PERIOD = 5
 
-    def __init__(self, plugin):
+    def __init__(self, plugin, wgc):
         self._wgc_games = dict()
         self._games_local = dict()
         self._plugin = plugin
+        self._wgc = wgc
         self._local_games_update_in_progress = False
         self._local_games_last_update = 0
 
@@ -27,7 +28,8 @@ class LocalGames():
     def __rescan_wgc(self):
         self._games_local.clear()
 
-        self._wgc_games = self._plugin._backend_wgc.GetGames()
+        self._wgc_games = self._wgc.get_local_applications()
+
         for id, game in self._wgc_games.items():
             local_game_state = LocalGameState.Running if game.IsRunning() else LocalGameState.Installed
             self._games_local[id] = LocalGame(id, local_game_state)

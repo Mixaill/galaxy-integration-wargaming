@@ -11,13 +11,8 @@ import sys
 import pprint
 import threading
 from urllib.parse import parse_qs
+from typing import Dict
 
-#expand sys.path
-thirdparty = os.path.join(os.path.dirname(os.path.realpath(__file__)),'3rdparty\\')
-if thirdparty not in sys.path:
-    sys.path.insert(0, thirdparty)
-
-#import 3rdparty    
 from Crypto.Hash import keccak
 import requests
 
@@ -28,6 +23,7 @@ class WGCAuthorizationResult(Enum):
     REQUIRES_2FA = 3
     INCORRECT_2FA = 4
     INVALID_LOGINPASS = 5
+    ACCOUNT_NOT_FOUND = 6
 
 class WGCAuthorizationServer(BaseHTTPRequestHandler):
     backend = None
@@ -118,20 +114,26 @@ class WGCAuthorizationServer(BaseHTTPRequestHandler):
         content_type = "text/html"
         response_content = ""
 
-        filepath = os.path.join(os.path.dirname(os.path.realpath(__file__)),'html\\%s.html' % self.path)
-        if os.path.isfile(filepath):
-            response_content = open(filepath).read()
-        else:
-            filepath = os.path.join(os.path.dirname(os.path.realpath(__file__)),'html\\404.html')
-            response_content = open(filepath).read()
+        try:
+            filepath = os.path.join(os.path.dirname(os.path.realpath(__file__)),'html\\%s.html' % self.path)
+            if os.path.isfile(filepath):
+                response_content = open(filepath).read()
+            else:
+                filepath = os.path.join(os.path.dirname(os.path.realpath(__file__)),'html\\404.html')
+                if os.path.isfile(filepath):
+                    response_content = open(filepath).read()
+                else:
+                    response_content = 'ERROR: FILE NOT FOUND'
 
-        self.send_response(status)
-        self.send_header('Content-type', content_type)
-        self.end_headers()
-        self.wfile.write(bytes(response_content, "UTF-8"))
+            self.send_response(status)
+            self.send_header('Content-type', content_type)
+            self.end_headers()
+            self.wfile.write(bytes(response_content, "UTF-8"))
+        except Exception:
+            logging.exception('WGCAuthorizationServer/do_GET: error on %s' % self.path)
 
 
-class WGCAuthorization:
+class WGCApi:
     HTTP_USER_AGENT = 'wgc/19.03.00.5220'
 
     OAUTH_GRANT_TYPE_BYPASSWORD = 'urn:wargaming:params:oauth:grant-type:basic'
@@ -162,7 +164,7 @@ class WGCAuthorization:
     # Getters
     #
 
-    def get_account_id(self):
+    def get_account_id(self) -> int:
         if self._login_info is None:
             logging.error('login info is none')
             return None
@@ -171,9 +173,9 @@ class WGCAuthorization:
             logging.error('login info does not contains user id')
             return None
 
-        return self._login_info['user']
+        return int(self._login_info['user'])
 
-    def get_account_email(self):
+    def get_account_email(self) -> str:
         if self._login_info is None:
             logging.error('login info is none')
             return None
@@ -184,7 +186,7 @@ class WGCAuthorization:
 
         return self._login_info['email']
 
-    def get_account_nickname(self):
+    def get_account_nickname(self) -> str:
         if self._login_info is None:
             logging.error('login info is none')
             return None
@@ -196,7 +198,7 @@ class WGCAuthorization:
         return self._login_info['nickname']
 
         
-    def get_account_realm(self):
+    def get_account_realm(self) -> str:
         if self._login_info is None:
             logging.error('login info is none')
             return None
@@ -211,7 +213,10 @@ class WGCAuthorization:
     # Authorization server
     #
 
-    def auth_server_start(self):
+    def auth_server_uri(self) -> str:
+        return 'http://%s:%s/login' % (self.LOCALSERVER_HOST, self.LOCALSERVER_PORT)
+
+    def auth_server_start(self) -> bool:
 
         if self._server_thread is not None:
             logging.warning('Auth server thread is already running')
@@ -228,7 +233,7 @@ class WGCAuthorization:
         self._server_thread.start()
         return True
 
-    def auth_server_stop(self):
+    def auth_server_stop(self) -> bool:
         if self._server_object is not None:
             self._server_object.shutdown()
             self._server_object = None
@@ -247,10 +252,10 @@ class WGCAuthorization:
     # Login Info
     #
 
-    def login_info_get(self):
+    def login_info_get(self) -> Dict[str,str]:
         return self._login_info
 
-    def login_info_set(self, login_info):
+    def login_info_set(self, login_info: Dict[str,str]) -> bool:
 
         if login_info is None:
             logging.error('wgc_auth/login_info_set: login info is none')
@@ -326,7 +331,9 @@ class WGCAuthorization:
                     return WGCAuthorizationResult.REQUIRES_2FA
                 elif token_data_bypassword['error_description'] == 'Invalid password parameter value.':
                     return WGCAuthorizationResult.INVALID_LOGINPASS
-            
+                elif token_data_bypassword['error_description'] == 'account_not_found':
+                    return WGCAuthorizationResult.ACCOUNT_NOT_FOUND
+
             logging.error('wgc_auth/do_auth_emailpass: failed to request token by email and password: %s' % token_data_bypassword)
             return WGCAuthorizationResult.FAILED
 

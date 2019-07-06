@@ -8,7 +8,7 @@ MUTANT_QUERY_STATE = 0x0001
 STANDARD_RIGHTS_REQUIRED = 0x000F0000
 MUTEX_ALL_ACCESS = STANDARD_RIGHTS_REQUIRED | SYNCHRONIZE | MUTANT_QUERY_STATE
 
-def is_mutex_exists(mutex_name):
+def is_mutex_exists(mutex_name) -> bool:
     kerneldll = ctypes.windll.kernel32
     mutex_handle = kerneldll.OpenMutexW(MUTEX_ALL_ACCESS, 0, str(mutex_name))
     if mutex_handle != 0:
