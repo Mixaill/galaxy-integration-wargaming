@@ -20,11 +20,13 @@ if MYPY:
     from typing import Tuple
     from typing import Type
     from typing import Union
+    from types import FrameType
+    from types import TracebackType
 
     from sentry_sdk.hub import Hub
 
     ExcInfo = Tuple[
-        Optional[Type[BaseException]], Optional[BaseException], Optional[Any]
+        Optional[Type[BaseException]], Optional[BaseException], Optional[TracebackType]
     ]
 
     Event = Dict[str, Any]
@@ -206,12 +208,12 @@ class AnnotatedValue(object):
 
 
 def get_type_name(cls):
-    # type: (Any) -> str
+    # type: (Optional[type]) -> Optional[str]
     return getattr(cls, "__qualname__", None) or getattr(cls, "__name__", None)
 
 
 def get_type_module(cls):
-    # type: (Any) -> Optional[Any]
+    # type: (Optional[type]) -> Optional[str]
     mod = getattr(cls, "__module__", None)
     if mod not in (None, "builtins", "__builtins__"):
         return mod
@@ -219,7 +221,7 @@ def get_type_module(cls):
 
 
 def should_hide_frame(frame):
-    # type: (Any) -> bool
+    # type: (FrameType) -> bool
     try:
         mod = frame.f_globals["__name__"]
         if mod.startswith("sentry_sdk."):
@@ -238,11 +240,12 @@ def should_hide_frame(frame):
 
 
 def iter_stacks(tb):
-    # type: (Any) -> Iterator[Any]
-    while tb is not None:
-        if not should_hide_frame(tb.tb_frame):
-            yield tb
-        tb = tb.tb_next
+    # type: (Optional[TracebackType]) -> Iterator[TracebackType]
+    tb_ = tb  # type: Optional[TracebackType]
+    while tb_ is not None:
+        if not should_hide_frame(tb_.tb_frame):
+            yield tb_
+        tb_ = tb_.tb_next
 
 
 def slim_string(value, length=MAX_STRING_LENGTH):
@@ -265,7 +268,7 @@ def get_lines_from_file(
     source = None
     if loader is not None and hasattr(loader, "get_source"):
         try:
-            source_str = loader.get_source(module)
+            source_str = loader.get_source(module)  # type: Optional[str]
         except (ImportError, IOError):
             source_str = None
         if source_str is not None:
@@ -299,9 +302,9 @@ def get_lines_from_file(
 
 
 def get_source_context(frame, tb_lineno):
-    # type: (Any, int) -> Tuple[List[str], Optional[str], List[str]]
+    # type: (FrameType, int) -> Tuple[List[str], Optional[str], List[str]]
     try:
-        abs_path = frame.f_code.co_filename
+        abs_path = frame.f_code.co_filename  # type: Optional[str]
     except Exception:
         abs_path = None
     try:
@@ -355,7 +358,10 @@ def safe_repr(value):
 
 
 def filename_for_module(module, abs_path):
-    # type: (str, str) -> str
+    # type: (Optional[str], Optional[str]) -> Optional[str]
+    if not abs_path or not module:
+        return abs_path
+
     try:
         if abs_path.endswith(".pyc"):
             abs_path = abs_path[:-1]
@@ -373,14 +379,14 @@ def filename_for_module(module, abs_path):
 
 
 def serialize_frame(frame, tb_lineno=None, with_locals=True):
-    # type: (Any, Optional[int], bool) -> Dict[str, Any]
+    # type: (FrameType, Optional[int], bool) -> Dict[str, Any]
     f_code = getattr(frame, "f_code", None)
-    if f_code:
-        abs_path = frame.f_code.co_filename
-        function = frame.f_code.co_name
-    else:
+    if not f_code:
         abs_path = None
         function = None
+    else:
+        abs_path = frame.f_code.co_filename
+        function = frame.f_code.co_name
     try:
         module = frame.f_globals["__name__"]
     except Exception:
@@ -400,14 +406,14 @@ def serialize_frame(frame, tb_lineno=None, with_locals=True):
         "pre_context": pre_context,
         "context_line": context_line,
         "post_context": post_context,
-    }
+    }  # type: Dict[str, Any]
     if with_locals:
         rv["vars"] = frame.f_locals
     return rv
 
 
 def stacktrace_from_traceback(tb=None, with_locals=True):
-    # type: (Any, bool) -> Dict[str, List[Dict[str, Any]]]
+    # type: (Optional[TracebackType], bool) -> Dict[str, List[Dict[str, Any]]]
     return {
         "frames": [
             serialize_frame(
@@ -442,7 +448,7 @@ def get_errno(exc_value):
 def single_exception_from_error_tuple(
     exc_type,  # type: Optional[type]
     exc_value,  # type: Optional[BaseException]
-    tb,  # type: Optional[Any]
+    tb,  # type: Optional[TracebackType]
     client_options=None,  # type: Optional[dict]
     mechanism=None,  # type: Optional[Dict[str, Any]]
 ):
@@ -688,7 +694,36 @@ def format_and_strip(
     if not chunks:
         raise ValueError("No formatting placeholders found")
 
-    params = list(reversed(params))
+    params = params[: len(chunks) - 1]
+
+    if len(params) < len(chunks) - 1:
+        raise ValueError("Not enough params.")
+
+    concat_chunks = []
+    iter_chunks = iter(chunks)  # type: Optional[Iterator]
+    iter_params = iter(params)  # type: Optional[Iterator]
+
+    while iter_chunks is not None or iter_params is not None:
+        if iter_chunks is not None:
+            try:
+                concat_chunks.append(next(iter_chunks))
+            except StopIteration:
+                iter_chunks = None
+
+        if iter_params is not None:
+            try:
+                concat_chunks.append(str(next(iter_params)))
+            except StopIteration:
+                iter_params = None
+
+    return concat_strings(
+        concat_chunks, strip_string=strip_string, max_length=max_length
+    )
+
+
+def concat_strings(
+    chunks, strip_string=strip_string, max_length=MAX_FORMAT_PARAM_LENGTH
+):
     rv_remarks = []  # type: List[Any]
     rv_original_length = 0
     rv_length = 0
@@ -700,28 +735,25 @@ def format_and_strip(
             for i, x in enumerate(remark)
         ]
 
-    for chunk in chunks[:-1]:
-        rv.append(chunk)
-        rv_length += len(chunk)
-        rv_original_length += len(chunk)
-        if not params:
-            raise ValueError("Not enough params.")
-        param = params.pop()
+    for chunk in chunks:
+        if isinstance(chunk, AnnotatedValue):
+            # Assume it's already stripped!
+            stripped_chunk = chunk
+            chunk = chunk.value
+        else:
+            stripped_chunk = strip_string(chunk, max_length=max_length)
 
-        stripped_param = strip_string(param, max_length=max_length)
-        if isinstance(stripped_param, AnnotatedValue):
+        if isinstance(stripped_chunk, AnnotatedValue):
             rv_remarks.extend(
-                realign_remark(remark) for remark in stripped_param.metadata["rem"]
+                realign_remark(remark) for remark in stripped_chunk.metadata["rem"]
             )
-            stripped_param = stripped_param.value
+            stripped_chunk_value = stripped_chunk.value
+        else:
+            stripped_chunk_value = stripped_chunk
 
-        rv_original_length += len(param)
-        rv_length += len(stripped_param)
-        rv.append(stripped_param)
-
-    rv.append(chunks[-1])
-    rv_length += len(chunks[-1])
-    rv_original_length += len(chunks[-1])
+        rv_original_length += len(chunk)
+        rv_length += len(stripped_chunk_value)  # type: ignore
+        rv.append(stripped_chunk_value)  # type: ignore
 
     rv_joined = u"".join(rv)
     assert len(rv_joined) == rv_length

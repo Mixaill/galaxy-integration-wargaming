@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: sentry-sdk
-Version: 0.9.5
+Version: 0.10.0
 Summary: Python client for Sentry (https://getsentry.com)
 Home-page: https://github.com/getsentry/sentry-python
 Author: Sentry Team and Contributors
@@ -30,6 +30,7 @@ Requires-Dist: falcon (>=1.4) ; extra == 'falcon'
 Provides-Extra: flask
 Requires-Dist: flask (>=0.8) ; extra == 'flask'
 Requires-Dist: blinker (>=1.1) ; extra == 'flask'
+
 
 Sentry-Python - Sentry SDK for Python
 =====================================

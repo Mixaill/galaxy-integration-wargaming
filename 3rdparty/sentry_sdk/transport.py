@@ -39,23 +39,31 @@ class Transport(object):
 
     parsed_dsn = None  # type: Optional[Dsn]
 
-    def __init__(self, options=None):
-        # type: (Optional[Dict[str, Any]]) -> None
+    def __init__(
+        self, options=None  # type: Optional[Dict[str, Any]]
+    ):
+        # type: (...) -> None
         self.options = options
         if options and options["dsn"] is not None and options["dsn"]:
             self.parsed_dsn = Dsn(options["dsn"])
         else:
             self.parsed_dsn = None
 
-    def capture_event(self, event):
-        # type: (Event) -> None
+    def capture_event(
+        self, event  # type: Event
+    ):
+        # type: (...) -> None
         """This gets invoked with the event dictionary when an event should
         be sent to sentry.
         """
         raise NotImplementedError()
 
-    def flush(self, timeout, callback=None):
-        # type: (float, Optional[Any]) -> None
+    def flush(
+        self,
+        timeout,  # type: float
+        callback=None,  # type: Optional[Any]
+    ):
+        # type: (...) -> None
         """Wait `timeout` seconds for the current events to be sent out."""
         pass
 
@@ -75,8 +83,10 @@ class Transport(object):
 class HttpTransport(Transport):
     """The default HTTP transport."""
 
-    def __init__(self, options):
-        # type: (Dict[str, Any]) -> None
+    def __init__(
+        self, options  # type: Dict[str, Any]
+    ):
+        # type: (...) -> None
         Transport.__init__(self, options)
         assert self.parsed_dsn is not None
         self._worker = BackgroundWorker()
@@ -96,8 +106,10 @@ class HttpTransport(Transport):
 
         self.hub_cls = Hub
 
-    def _send_event(self, event):
-        # type: (Event) -> None
+    def _send_event(
+        self, event  # type: Event
+    ):
+        # type: (...) -> None
         if self._disabled_until is not None:
             if datetime.utcnow() < self._disabled_until:
                 return
@@ -109,12 +121,13 @@ class HttpTransport(Transport):
 
         assert self.parsed_dsn is not None
         logger.debug(
-            "Sending %s event [%s] to %s project:%s"
+            "Sending event, type:%s level:%s event_id:%s project:%s host:%s"
             % (
-                event.get("level") or "error",
-                event["event_id"],
-                self.parsed_dsn.host,
+                event.get("type") or "null",
+                event.get("level") or "null",
+                event.get("event_id") or "null",
                 self.parsed_dsn.project_id,
+                self.parsed_dsn.host,
             )
         )
         response = self._pool.request(
@@ -180,8 +193,10 @@ class HttpTransport(Transport):
         else:
             return urllib3.PoolManager(**opts)
 
-    def capture_event(self, event):
-        # type: (Event) -> None
+    def capture_event(
+        self, event  # type: Event
+    ):
+        # type: (...) -> None
         hub = self.hub_cls.current
 
         def send_event_wrapper():
@@ -192,8 +207,12 @@ class HttpTransport(Transport):
 
         self._worker.submit(send_event_wrapper)
 
-    def flush(self, timeout, callback=None):
-        # type: (float, Optional[Any]) -> None
+    def flush(
+        self,
+        timeout,  # type: float
+        callback=None,  # type: Optional[Any]
+    ):
+        # type: (...) -> None
         logger.debug("Flushing HTTP transport")
         if timeout > 0:
             self._worker.flush(timeout, callback)
@@ -205,13 +224,17 @@ class HttpTransport(Transport):
 
 
 class _FunctionTransport(Transport):
-    def __init__(self, func):
-        # type: (Callable[[Event], None]) -> None
+    def __init__(
+        self, func  # type: Callable[[Event], None]
+    ):
+        # type: (...) -> None
         Transport.__init__(self)
         self._func = func
 
-    def capture_event(self, event):
-        # type: (Event) -> None
+    def capture_event(
+        self, event  # type: Event
+    ):
+        # type: (...) -> None
         self._func(event)
         return None
 

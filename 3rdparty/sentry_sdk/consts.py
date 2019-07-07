@@ -49,6 +49,9 @@ class ClientConstructor(object):
         attach_stacktrace=False,  # type: bool
         ca_certs=None,  # type: Optional[str]
         propagate_traces=True,  # type: bool
+        # DO NOT ENABLE THIS RIGHT NOW UNLESS YOU WANT TO EXCEED YOUR EVENT QUOTA IMMEDIATELY
+        traces_sample_rate=0.0,  # type: float
+        traceparent_v2=False,  # type: bool
     ):
         # type: (...) -> None
         pass
@@ -71,7 +74,7 @@ DEFAULT_OPTIONS = _get_default_options()
 del _get_default_options
 
 
-VERSION = "0.9.5"
+VERSION = "0.10.0"
 SDK_INFO = {
     "name": "sentry.python",
     "version": VERSION,
