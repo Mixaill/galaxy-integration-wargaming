@@ -1,6 +1,5 @@
 DEBUG = False
 
-from enum import Enum
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import logging
 import json
@@ -16,14 +15,7 @@ from typing import Dict
 from Crypto.Hash import keccak
 import requests
 
-class WGCAuthorizationResult(Enum):
-    UNKNOWN = 0
-    FAILED = 1
-    FINISHED = 2
-    REQUIRES_2FA = 3
-    INCORRECT_2FA = 4
-    INVALID_LOGINPASS = 5
-    ACCOUNT_NOT_FOUND = 6
+from .wgc_constants import WGCAuthorizationResult, WGCRealms
 
 class WGCAuthorizationServer(BaseHTTPRequestHandler):
     backend = None
@@ -435,48 +427,27 @@ class WGCApi:
     # URL formatting
     #
 
-    def __get_oauth_clientid(self, realm):
-        if realm == 'RU':
-            return '77cxLwtEJ9uvlcm2sYe4O8viIIWn1FEWlooMTTqF'
-        if realm == 'EU':
-            return 'JJ5yuABVKqZekaktUR8cejMzxbbHAtUVmY2eamsS'
-        if realm == 'NA':
-            return 'AJ5PLrEuz5C2d0hHmmjQJtjaMpueSahYY8CiswHE'
-        if realm == 'ASIA':
-            return 'Xe2oDM8Z6A4N70VZIV8RyVLHpvdtVPYNRIIYBklJ'
-        
-        logging.error('wgc_auth/get_oauth_clientid: unknown realm')
-        return None
-
-    def __get_url(self, ltype, realm, url):
+    def __get_url(self, ltype : str, realm: str, url: str) -> str:
         realm = realm.upper()
-
-        if ltype == 'wgnet':
-            if realm == 'RU':
-                return 'https://ru.wargaming.net' + url
-            if realm == 'EU':
-                return 'https://eu.wargaming.net' + url
-            if realm == 'NA':
-                return 'https://na.wargaming.net' + url
-            if realm == 'ASIA':
-                return 'https://asia.wargaming.net' + url
-
-        if ltype == 'wgcps':
-            if realm == 'RU':
-                return 'https://wgcps-ru.wargaming.net' + url
-            if realm == 'EU':
-                return 'https://wgcps-eu.wargaming.net' + url
-            if realm == 'NA':
-                return 'https://wgcps-na.wargaming.net' + url
-            if realm == 'ASIA':
-                return 'https://wgcps-asia.wargaming.net' + url
-
-        logging.error('Failed to specify link')
-        return None
+        
+        try:
+            return 'https://%s%s' % (WGCRealms[realm]['domain_%s' % ltype ], url)
+        except Exception:
+            logging.exception('wgc_api/__get_url: failed to generate URL for ltype %s and realm %s' % (ltype, realm))
+            return None
 
     #
     # OAuth
     #
+
+    def __oauth_get_clientid(self, realm):
+        realm = realm.upper()
+
+        try:
+            return WGCRealms[realm]['client_id']
+        except Exception:
+            logging.exception('wgc_api/__get_oauth_clientid: failed to get client Id for realm %s' % realm)
+            return None
 
     def __oauth_challenge_get(self, realm):
         r = self._session.get(self.__get_url('wgnet', realm, self.OUATH_URL_CHALLENGE))
@@ -517,7 +488,7 @@ class WGCApi:
         body['username'] = email
         body['password'] = password
         body['grant_type'] = self.OAUTH_GRANT_TYPE_BYPASSWORD
-        body['client_id'] = self.__get_oauth_clientid(realm)
+        body['client_id'] = self.__oauth_get_clientid(realm)
         body['tid'] = self._tracking_id
         body['pow'] = pow_number
         if twofactor_token is not None:
@@ -543,7 +514,7 @@ class WGCApi:
         body = dict()
         body['access_token'] = token_data['access_token']
         body['grant_type'] = self.OAUTH_GRANT_TYPE_BYTOKEN
-        body['client_id'] = self.__get_oauth_clientid(realm)
+        body['client_id'] = self.__oauth_get_clientid(realm)
         body['exchange_code'] = ''.join(random.choices(string.digits+'ABCDEF', k=32))
         body['tid'] = self._tracking_id
 
