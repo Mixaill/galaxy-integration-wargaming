@@ -9,7 +9,8 @@ class WGCLocation():
     WGC_PATH_FILE = 'Wargaming.net\\GameCenter\\data\\wgc_path.dat'
     WGC_TRACKING_FILE = 'Wargaming.net\\GameCenter\\data\\wgc_tracking_id.dat'
     WGC_PROGRAMDATA_DIR = 'Wargaming.net\\GameCenter\\'
-    
+
+    WGC_PREFERENCES_FILE = 'preferences.xml'  
     WGC_EXECUTABLE_NAME = 'WGC.exe'
 
     @staticmethod
@@ -46,6 +47,18 @@ class WGCLocation():
 
         return None       
     
+    @staticmethod
+    def get_wgc_preferences_file() -> str:
+        wgc_dir = WGCLocation.get_wgc_dir()
+        if wgc_dir is None:
+            return None
+
+        preferences_path = os.path.join(wgc_dir, WGCLocation.WGC_PREFERENCES_FILE)
+        if not os.path.exists(preferences_path):
+            return None
+        
+        return preferences_path
+
     @staticmethod
     def get_apps_dirs() -> List[str]:
         apps = list()

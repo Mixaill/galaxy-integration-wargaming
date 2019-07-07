@@ -132,15 +132,19 @@ class WGCApi:
     OAUTH_GRANT_TYPE_BYTOKEN = 'urn:wargaming:params:oauth:grant-type:access-token'
     OUATH_URL_CHALLENGE = '/id/api/v2/account/credentials/create/oauth/token/challenge/'
     OAUTH_URL_TOKEN = '/id/api/v2/account/credentials/create/oauth/token/'
+    
     WGNI_URL_ACCOUNTINFO = '/id/api/v2/account/info/'
 
+    WGCPS_FETCH_PRODUCT_INFO = '/platform/api/v1/fetchProductList'
     WGCPS_LOGINSESSION = '/auth/api/v1/loginSession'
 
     LOCALSERVER_HOST = '127.0.0.1'
     LOCALSERVER_PORT = 13337
 
-    def __init__(self, tracking_id = ''):
+    def __init__(self, tracking_id : str = '', country_code : str = ''):
         self._tracking_id = tracking_id
+        self._country_code = country_code
+
         self._server_thread = None
         self._server_object = None
 

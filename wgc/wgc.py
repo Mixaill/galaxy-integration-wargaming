@@ -1,6 +1,7 @@
 import os
 import subprocess
 from typing import Dict
+import xml.etree.ElementTree as ElementTree
 
 from .wgc_api import WGCApi
 from .wgc_application import WGCApplication
@@ -8,7 +9,7 @@ from .wgc_location import WGCLocation
 
 class WGC():
     def __init__(self):
-        self._api = WGCApi(self.get_tracking_id())
+        self._api = WGCApi(self.get_tracking_id(), self.get_country_code())
         pass
 
     #General
@@ -48,6 +49,15 @@ class WGC():
     def account_realm(self) -> str:
         return self._api.get_account_realm()
 
+    # Tracking
+
+    def get_country_code(self) -> str:
+        wgc_preferences_file = WGCLocation.get_wgc_preferences_file()
+        if os.path.exists(wgc_preferences_file):
+            xml_file = ElementTree.parse(wgc_preferences_file).getroot()
+            return xml_file.find('application/user_location_country_code').text
+
+        return ''
 
     def get_tracking_id(self) -> str:
         tracking_id = ''
