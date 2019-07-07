@@ -1,6 +1,9 @@
 import ctypes
 import os
 
+### Process
+DETACHED_PROCESS = 0x00000008
+
 ### Mutex
 
 SYNCHRONIZE = 0x00100000

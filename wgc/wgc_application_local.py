@@ -2,10 +2,10 @@ import os
 import subprocess
 import xml.etree.ElementTree as ElementTree
 
-from .wgc_helper import is_mutex_exists
+from .wgc_helper import DETACHED_PROCESS, is_mutex_exists
 
 class WGCLocalApplication():
-    DETACHED_PROCESS = 0x00000008
+    
     INFO_FILE = 'game_info.xml'
     METADATA_FILE = 'game_metadata\\metadata.xml'
     WGCAPI_FILE = 'wgc_api.exe'
@@ -52,7 +52,7 @@ class WGCLocalApplication():
         return os.path.join(self.GetGameFolder(), self.WGCAPI_FILE)
 
     def RunExecutable(self) -> None:
-        subprocess.Popen([self.GetExecutablePath()], creationflags=self.DETACHED_PROCESS)
+        subprocess.Popen([self.GetExecutablePath()], creationflags=DETACHED_PROCESS)
 
     def UninstallGame(self) -> None:
-        subprocess.Popen([self.GetWgcapiPath(), '--uninstall'], creationflags=self.DETACHED_PROCESS, cwd = self.GetGameFolder())
+        subprocess.Popen([self.GetWgcapiPath(), '--uninstall'], creationflags=DETACHED_PROCESS, cwd = self.GetGameFolder())

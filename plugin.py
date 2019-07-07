@@ -72,9 +72,8 @@ class WargamingPlugin(Plugin):
     async def get_owned_games(self):
         owned_applications = list()
 
-        for application in self._wgc.get_owned_applications():
-            for instance_id, instance_name in application.get_application_instances().items():
-                owned_applications.append(Game(instance_id, instance_name, None, LicenseInfo(LicenseType.FreeToPlay, None)))
+        for instance in self._wgc.get_owned_applications():
+            owned_applications.append(Game(instance.get_application_id(), instance.get_application_fullname(), None, LicenseInfo(LicenseType.FreeToPlay, None)))
 
         return owned_applications
 
@@ -84,7 +83,13 @@ class WargamingPlugin(Plugin):
             game.RunExecutable()
         
     async def install_game(self, game_id):
-        pass
+        instances = self._wgc.get_owned_applications()
+
+        if game_id not in instances:
+            logging.warning('plugin/install_games: failed to find the application with id %s' % game_id)
+            raise BackendError()
+        
+        instances[game_id].install_application()
 
     async def uninstall_game(self, game_id):
         game = self._localgames.GetWgcGame(game_id)

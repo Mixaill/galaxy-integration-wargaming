@@ -5,17 +5,13 @@ import xml.etree.ElementTree as ElementTree
 
 from .wgc_api import WGCApi
 from .wgc_application_local import WGCLocalApplication
-from .wgc_application_owned import WGCOwnedApplication
+from .wgc_application_owned import WGCOwnedApplication, WGCOwnedApplicationInstance
 from .wgc_location import WGCLocation
 
 class WGC():
     def __init__(self):
         self._api = WGCApi(self.get_tracking_id(), self.get_country_code(), self.get_wgc_language())
         pass
-
-    #General
-    def is_installed(self) -> bool:
-        return WGCLocation.get_wgc_dir() != None
 
 
     #Auth Server
@@ -63,7 +59,6 @@ class WGC():
     def get_wgc_language(self) -> str:
         return self.__get_preferences_value('application/localization_manager/current_localization')
 
-
     def get_country_code(self) -> str:
         return self.__get_preferences_value('application/user_location_country_code')
 
@@ -80,6 +75,9 @@ class WGC():
 
         return tracking_id
 
+
+    # Applications
+
     def get_local_applications(self) -> Dict[str, WGCLocalApplication]:
         apps = dict()
         for app_dir in WGCLocation.get_apps_dirs():
@@ -88,5 +86,9 @@ class WGC():
 
         return apps
 
-    def get_owned_applications(self) -> Dict[str, WGCOwnedApplication]:
-        return self._api.fetch_product_list()
+    def get_owned_applications(self) -> Dict[str, WGCOwnedApplicationInstance]:
+        applications_instances = dict()
+        for application in self._api.fetch_product_list():
+            applications_instances.update(application.get_application_instances())
+
+        return applications_instances

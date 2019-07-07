@@ -46,6 +46,14 @@ class WGCLocation():
             return wgc_programdata_dir
 
         return None       
+
+    @staticmethod
+    def get_wgc_exe_path() -> str:
+        wgc_dir = WGCLocation.get_wgc_dir()
+        if wgc_dir is None:
+            return None
+
+        return os.path.join(wgc_dir, WGCLocation.WGC_EXECUTABLE_NAME)
     
     @staticmethod
     def get_wgc_preferences_file() -> str:
@@ -75,3 +83,7 @@ class WGCLocation():
                 apps.append(app_path)
 
         return apps
+
+    @staticmethod
+    def is_wgc_installed() -> bool:
+        return WGCLocation.get_wgc_dir() != None
