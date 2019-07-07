@@ -7,6 +7,9 @@ GOG Galaxy 2.0 Wargaming Game Center integration
 
 ## Changelog
 
+* v. 0.5.0
+   * Fetch owned games from Wargaming.net account
+
 * v. 0.4.5
    * Improve Wargaming.net authorization error processing
 

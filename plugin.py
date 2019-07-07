@@ -70,11 +70,13 @@ class WargamingPlugin(Plugin):
         return self._localgames.get_local_games()
 
     async def get_owned_games(self):
-        owned_games = list()
-        for game in self._wgc.get_owned_applications().values():
-            owned_games.append(Game(game.GetId(), game.GetName(), None, LicenseInfo(LicenseType.FreeToPlay, None)))
+        owned_applications = list()
 
-        return owned_games
+        for application in self._wgc.get_owned_applications():
+            for instance_id, instance_name in application.get_application_instances().items():
+                owned_applications.append(Game(instance_id, instance_name, None, LicenseInfo(LicenseType.FreeToPlay, None)))
+
+        return owned_applications
 
     async def launch_game(self, game_id):
         game = self._localgames.GetWgcGame(game_id)

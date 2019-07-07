@@ -4,7 +4,7 @@ import xml.etree.ElementTree as ElementTree
 
 from .wgc_helper import is_mutex_exists
 
-class WGCApplication():
+class WGCLocalApplication():
     DETACHED_PROCESS = 0x00000008
     INFO_FILE = 'game_info.xml'
     METADATA_FILE = 'game_metadata\\metadata.xml'

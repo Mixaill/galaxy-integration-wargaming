@@ -4,12 +4,13 @@ from typing import Dict
 import xml.etree.ElementTree as ElementTree
 
 from .wgc_api import WGCApi
-from .wgc_application import WGCApplication
+from .wgc_application_local import WGCLocalApplication
+from .wgc_application_owned import WGCOwnedApplication
 from .wgc_location import WGCLocation
 
 class WGC():
     def __init__(self):
-        self._api = WGCApi(self.get_tracking_id(), self.get_country_code())
+        self._api = WGCApi(self.get_tracking_id(), self.get_country_code(), self.get_wgc_language())
         pass
 
     #General
@@ -49,15 +50,25 @@ class WGC():
     def account_realm(self) -> str:
         return self._api.get_account_realm()
 
-    # Tracking
+    # Settings
 
-    def get_country_code(self) -> str:
+    def __get_preferences_value(self, node_name: str) -> str:
         wgc_preferences_file = WGCLocation.get_wgc_preferences_file()
         if os.path.exists(wgc_preferences_file):
             xml_file = ElementTree.parse(wgc_preferences_file).getroot()
-            return xml_file.find('application/user_location_country_code').text
+            return xml_file.find(node_name).text
 
         return ''
+
+    def get_wgc_language(self) -> str:
+        return self.__get_preferences_value('application/localization_manager/current_localization')
+
+
+    def get_country_code(self) -> str:
+        return self.__get_preferences_value('application/user_location_country_code')
+
+
+    # Tracking
 
     def get_tracking_id(self) -> str:
         tracking_id = ''
@@ -69,14 +80,13 @@ class WGC():
 
         return tracking_id
 
-    def get_local_applications(self) -> Dict[str, WGCApplication]:
+    def get_local_applications(self) -> Dict[str, WGCLocalApplication]:
         apps = dict()
         for app_dir in WGCLocation.get_apps_dirs():
-            app = WGCApplication(app_dir)
+            app = WGCLocalApplication(app_dir)
             apps[app.GetId()] = app
 
         return apps
 
-    def get_owned_applications(self) -> Dict[str, WGCApplication]:
-        #TODO: implement fetching owned application from WGCPS
-        return self.get_local_applications()
+    def get_owned_applications(self) -> Dict[str, WGCOwnedApplication]:
+        return self._api.fetch_product_list()

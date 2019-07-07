@@ -10,12 +10,14 @@ import sys
 import pprint
 import threading
 from urllib.parse import parse_qs
-from typing import Dict
+from typing import Dict, List
 
 from Crypto.Hash import keccak
 import requests
 
+from .wgc_application_owned import WGCOwnedApplication
 from .wgc_constants import WGCAuthorizationResult, WGCRealms
+
 
 class WGCAuthorizationServer(BaseHTTPRequestHandler):
     backend = None
@@ -137,13 +139,16 @@ class WGCApi:
 
     WGCPS_FETCH_PRODUCT_INFO = '/platform/api/v1/fetchProductList'
     WGCPS_LOGINSESSION = '/auth/api/v1/loginSession'
+    
+    WGUSCS_SHOWROOM = '/api/v15/content/showroom/'
 
     LOCALSERVER_HOST = '127.0.0.1'
     LOCALSERVER_PORT = 13337
 
-    def __init__(self, tracking_id : str = '', country_code : str = ''):
+    def __init__(self, tracking_id : str = '', country_code : str = '', language_code : str = 'en'):
         self._tracking_id = tracking_id
         self._country_code = country_code
+        self._language_code = language_code
 
         self._server_thread = None
         self._server_object = None
@@ -561,3 +566,87 @@ class WGCApi:
 
         return json.loads(response.text)
 
+    #
+    # Fetch product list
+    #
+
+    def fetch_product_list(self) -> List[WGCOwnedApplication]:
+        product_list = list()
+
+        additional_gameurls = list()
+        for game_data in self.__wgcps_fetch_product_list()['data']['product_content']:
+            wgc_data = game_data['metadata']['wgc']
+            additional_gameurls.append('%s@%s' % (wgc_data['application_id']['data'], wgc_data['update_url']['data']))
+
+        showroom_data = self.__wguscs_get_showroom(additional_gameurls)
+        if showroom_data is None:
+            logging.error('wgc_api/fetch_product_list: error on retrieving showroom data')
+            return product_list
+
+        for product in showroom_data['showcase']:
+            product_list.append(WGCOwnedApplication(product))
+
+        return product_list
+
+
+    def __wgcps_fetch_product_list(self):
+        if self._login_info is None:
+            logging.error('wgc_auth/__wgcps_fetch_product_list: login info is none')
+            return None
+
+        if 'realm' not in self._login_info:
+            logging.error('wgc_auth/__wgcps_fetch_product_list: login info does not contain realm')
+            return None
+
+        response = self._session.post(
+            self.__get_url('wgcps', self._login_info['realm'], self.WGCPS_FETCH_PRODUCT_INFO), 
+            json = { 'account_id' : self.get_account_id(), 'country' : self._country_code, 'storefront' : 'wgc_showcase' })
+      
+        while response.status_code == 202:
+            response = self._session.get(response.headers['Location'])
+        
+        if response.status_code != 200:
+            logging.error('wgc_auth/__wgcps_fetch_product_list: error on retrieving account info: %s' % response.text)
+            return None
+
+        response_content = json.loads(response.text)
+
+        #load additional adata
+        response_content['data']['product_content'] = list()
+        for product_uri in response_content['data']['product_uris']:
+            product_response = self._session.get(product_uri)
+            if response.status_code != 200:
+                logging.error('wgc_auth/__wgcps_fetch_product_list: error on retrieving product info: %s' % product_uri)
+                continue
+
+            response_content['data']['product_content'].append(json.loads(product_response.text))
+
+        return response_content
+
+
+    def __wguscs_get_showroom(self, additional_urls : List[str] = None):
+        if self._login_info is None:
+            logging.error('wgc_auth/__wguscs_get_showroom: login info is none')
+            return None
+
+        if 'realm' not in self._login_info:
+            logging.error('wgc_auth/__wguscs_get_showroom: login info does not contain realm')
+            return None
+
+        additionals = ''
+        if additional_urls:     
+            additionals = '&showcase_products=' + str.join('&showcase_products=', additional_urls)
+
+        url = self.__get_url('wguscs', self._login_info['realm'], self.WGUSCS_SHOWROOM)
+        url = url + '?lang=%s' % self._language_code.upper()
+        url = url + '&gameid=WGC.RU.PRODUCTION&format=json'
+        url = url + '&country_code=%s' % self._country_code
+        url = url + additionals
+
+        showroom_response = self._session.get(url)
+        
+        if showroom_response.status_code != 200:
+            logging.error('wgc_auth/__wguscs_get_showroom: error on retrieving showroom data: %s' % response.text)
+            return None
+
+        return json.loads(showroom_response.text)
