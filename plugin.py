@@ -72,7 +72,7 @@ class WargamingPlugin(Plugin):
     async def get_owned_games(self):
         owned_applications = list()
 
-        for instance in self._wgc.get_owned_applications():
+        for instance in self._wgc.get_owned_applications().values():
             owned_applications.append(Game(instance.get_application_id(), instance.get_application_fullname(), None, LicenseInfo(LicenseType.FreeToPlay, None)))
 
         return owned_applications
