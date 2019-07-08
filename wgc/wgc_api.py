@@ -82,9 +82,13 @@ class WGCAuthorizationServer(BaseHTTPRequestHandler):
             data_valid = False
         auth_result = False
 
+        use_backup_code = False
+        if b'use_backup' in data:
+            use_backup_code = True
+
         if data_valid:
             try:
-                auth_result = self.backend.do_auth_2fa(data[b'authcode'][0].decode("utf-8"))
+                auth_result = self.backend.do_auth_2fa(data[b'authcode'][0].decode("utf-8"), use_backup_code)
             except Exception:
                 logging.exception("error on doing auth:")
  
@@ -95,7 +99,7 @@ class WGCAuthorizationServer(BaseHTTPRequestHandler):
             self.send_header('Location','/finished')
         elif auth_result == WGCAuthorizationResult.REQUIRES_2FA:
             self.send_header('Location','/2fa')
-        elif auth_result == WGCAuthorizationResult.INCORRECT_2FA:
+        elif auth_result == WGCAuthorizationResult.INCORRECT_2FA or auth_result == WGCAuthorizationResult.INCORRECT_2FA_BACKUP: 
             self.send_header('Location','/2fa_failed')
         else:
             self.send_header('Location','/login_failed')
@@ -341,7 +345,7 @@ class WGCApi:
         return self.do_auth_token(realm, email, token_data_bypassword)
 
 
-    def do_auth_2fa(self, otp_code) -> WGCAuthorizationResult:
+    def do_auth_2fa(self, otp_code: str, use_backup_code: bool) -> WGCAuthorizationResult:
         '''
         Submits 2FA answer and continue authorization
         '''
@@ -372,7 +376,8 @@ class WGCApi:
             self._login_info_temp['password'],
             self._login_info_temp['pow_number'],
             self._login_info_temp['twofactor_token'],
-            otp_code)
+            otp_code,
+            use_backup_code)
 
         # process error
         if token_data_byotp['status_code'] != 200:
@@ -380,6 +385,8 @@ class WGCApi:
                 error_desc = token_data_byotp['error_description'] 
                 if error_desc == 'twofactor_invalid' or error_desc == 'Invalid otp_code parameter value.':
                     return WGCAuthorizationResult.INCORRECT_2FA
+                if error_desc == 'Invalid backup_code parameter value.':
+                    return WGCAuthorizationResult.INCORRECT_2FA_BACKUP
             
             logging.error('wgc_auth/do_auth_2fa: failed to request token by email, password and OTP: %s' % token_data_byotp)
             return WGCAuthorizationResult.FAILED
@@ -492,7 +499,7 @@ class WGCApi:
 
             pow_number = pow_number + 1
 
-    def __oauth_token_get_bypassword(self, realm, email, password, pow_number, twofactor_token = None, otp_code = None):
+    def __oauth_token_get_bypassword(self, realm, email, password, pow_number, twofactor_token : str = None, otp_code : str = None, use_backup_code : bool = False):
         body = dict()
         body['username'] = email
         body['password'] = password
@@ -503,7 +510,10 @@ class WGCApi:
         if twofactor_token is not None:
             body['twofactor_token'] = twofactor_token
         if otp_code is not None:
-            body['otp_code'] = otp_code
+            if use_backup_code:
+                body['backup_code'] = otp_code
+            else:
+                body['otp_code'] = otp_code
 
         response = self._session.post(self.__get_url('wgnet', realm, self.OAUTH_URL_TOKEN), data = body)
         while response.status_code == 202:
@@ -513,7 +523,7 @@ class WGCApi:
         try:
             text = json.loads(response.text)
         except Exception:
-            logging.exception('wgc_auth/oauth_token_get_bypassword: failed to parse response')
+            logging.exception('wgc_api/__oauth_token_get_bypassword: failed to parse response')
             return None
 
         text['status_code'] = response.status_code

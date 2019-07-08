@@ -8,6 +8,7 @@ class WGCAuthorizationResult(Enum):
     INCORRECT_2FA = 4
     INVALID_LOGINPASS = 5
     ACCOUNT_NOT_FOUND = 6
+    INCORRECT_2FA_BACKUP = 7
 
 
 WGCRealms = { 

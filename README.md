@@ -7,6 +7,12 @@ GOG Galaxy 2.0 Wargaming Game Center integration
 
 ## Changelog
 
+* v. 0.6.0
+   * Implemented ability to install games. Ability to install games is implemented. Now this integration implements a minimal set of functions for everyday use!
+   * Implemented login via OTP backup codes
+   * Fixed exception in `get_owned_games()` function
+   * Updated Sentry SDK to 0.10.0
+
 * v. 0.5.0
    * Fetch owned games from Wargaming.net account
 
