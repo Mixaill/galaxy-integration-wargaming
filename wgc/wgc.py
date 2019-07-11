@@ -50,7 +50,7 @@ class WGC():
 
     def __get_preferences_value(self, node_name: str) -> str:
         wgc_preferences_file = WGCLocation.get_wgc_preferences_file()
-        if os.path.exists(wgc_preferences_file):
+        if wgc_preferences_file is not None:
             xml_file = ElementTree.parse(wgc_preferences_file).getroot()
             return xml_file.find(node_name).text
 
