@@ -584,9 +584,11 @@ class WGCApi:
         product_list = list()
 
         additional_gameurls = list()
-        for game_data in self.__wgcps_fetch_product_list()['data']['product_content']:
-            wgc_data = game_data['metadata']['wgc']
-            additional_gameurls.append('%s@%s' % (wgc_data['application_id']['data'], wgc_data['update_url']['data']))
+        product_list = self.__wgcps_fetch_product_list()
+        if product_list is not None:
+            for game_data in product_list['data']['product_content']:
+                wgc_data = game_data['metadata']['wgc']
+                additional_gameurls.append('%s@%s' % (wgc_data['application_id']['data'], wgc_data['update_url']['data']))
 
         showroom_data = self.__wguscs_get_showroom(additional_gameurls)
         if showroom_data is None:
@@ -615,11 +617,20 @@ class WGCApi:
         while response.status_code == 202:
             response = self._session.get(response.headers['Location'])
         
-        if response.status_code != 200:
-            logging.error('wgc_auth/__wgcps_fetch_product_list: error on retrieving account info: %s' % response.text)
+        response_content = None
+        try:
+            response_content = json.loads(response.text)
+        except Exception:
+            logging.exception('wgc_auth/__wgcps_fetch_product_list: failed for parse json: %s' % response.text)
             return None
 
-        response_content = json.loads(response.text)
+        if response.status_code != 200:
+            #{"status": "error", "errors": [{"code": "platform_error", "context": {"result_code": "EXCEPTION"}}, {"code": "retry", "context": {"interval": 30}}]}
+            if 'errors' in response_content and response_content['errors'][0]['code'] == 'platform_error':
+                logging.warning('wgc_auth/__wgcps_fetch_product_list: platform error: %s' % response.text)
+            else:
+                logging.error('wgc_auth/__wgcps_fetch_product_list: error on retrieving account info: %s' % response.text)
+            return None
 
         #load additional adata
         response_content['data']['product_content'] = list()
