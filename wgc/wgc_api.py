@@ -584,9 +584,9 @@ class WGCApi:
         product_list = list()
 
         additional_gameurls = list()
-        product_list = self.__wgcps_fetch_product_list()
-        if product_list is not None:
-            for game_data in product_list['data']['product_content']:
+        wgcps_product_list = self.__wgcps_fetch_product_list()
+        if wgcps_product_list is not None:
+            for game_data in wgcps_product_list['data']['product_content']:
                 wgc_data = game_data['metadata']['wgc']
                 additional_gameurls.append('%s@%s' % (wgc_data['application_id']['data'], wgc_data['update_url']['data']))
 
