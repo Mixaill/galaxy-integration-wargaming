@@ -25,6 +25,47 @@ XMPPRealms = {
             'host'  : 'wotru.xmpp.wargaming.net',
             'port'  : 5222,
             'domain': 'wot-ru.loc',
+        },
+        'EU' : {
+            'host'  : 'woteu.xmpp.wargaming.net',
+            'port'  : 5222,
+            'domain': 'wot-eu.loc',
+        },
+        'NA' : {
+            'host'  : 'wotna.xmpp.wargaming.net',
+            'port'  : 5222,
+            'domain': 'wot-na.loc',
+        },
+        'ASIA' : {
+            'host'  : 'wotasia.xmpp.wargaming.net',
+            'port'  : 5222,
+            'domain': 'wot-asia.loc',
         }
+    }
+}
+
+SPAIDRealms = {
+        'RU' : (1, 499999999),
+        'EU' : (500000000, 999999999),
+        'NA' : (1000000000, 1499999999),
+        'ASIA' : (2000000000, 3499999999)
+}
+
+WoTPAPIRealms = {
+    'RU' : {
+        'host': 'api.worldoftanks.ru',
+        'client_id' : 'ebe303a75bd983f67f21b43578a1e498'
+    },
+    'EU' : {
+        'host': 'api.worldoftanks.eu',
+        'client_id' : 'ebe303a75bd983f67f21b43578a1e498'
+    },
+    'NA' : {
+        'host': 'api.worldoftanks.com',
+        'client_id' : 'ebe303a75bd983f67f21b43578a1e498'
+    },
+    'ASIA' : {
+        'host': 'api.worldoftanks.asia',
+        'client_id' : 'ebe303a75bd983f67f21b43578a1e498'
     }
 }

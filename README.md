@@ -5,6 +5,11 @@ GOG Galaxy 2.0 Wargaming Game Center integration
 
 * Clone repository to `%localappdata%\GOG.com\Galaxy\plugins\installed\wargaming\`
 
+## Limitations
+
+* Only World of Tanks friends and chat is supported
+* No friends and chat roaming between realms
+
 ## Changelog
 
 * v. 0.6.0

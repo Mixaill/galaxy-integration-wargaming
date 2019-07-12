@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 import sys
@@ -16,14 +17,14 @@ sentry_sdk.init(
     "https://965fd62de6974b1c8301b794a426238d@sentry.openwg.net/2",
     release=("galaxy-integration-wargaming@%s" % __version__))
 
-from galaxy.api.consts import Platform
+from galaxy.api.consts import Platform, PresenceState
 from galaxy.api.errors import BackendError, InvalidCredentials
 from galaxy.api.plugin import Plugin, create_and_run_plugin
-from galaxy.api.types import Authentication, Game, LicenseInfo, LicenseType, LocalGame, LocalGameState, NextStep, FriendInfo
+from galaxy.api.types import Authentication, Game, LicenseInfo, LicenseType, LocalGame, LocalGameState, NextStep, FriendInfo, UserInfo, Presence
 
 from localgames import LocalGames
 
-from wgc import WGC
+from wgc import WGC, WoTPAPI
 
 class WargamingPlugin(Plugin):
     def __init__(self, reader, writer, token):
@@ -99,17 +100,35 @@ class WargamingPlugin(Plugin):
         if game is not None:
             game.UninstallGame()
 
-    async def get_friends(self) -> List[FriendInfo]:
+    async def get_friends(self):
         friends = list()
         xmpp_client = self.__xmpp_get_client()
 
+        while len(xmpp_client.client_roster) == 0:
+            await asyncio.sleep(1)
+
         for jid in xmpp_client.client_roster:
             userid = jid.split('@', 1)[0]
-            username = xmpp_client.client_roster[jid]['name']
-            friends.append(FriendInfo(userid, username))
-
+            if userid != str(self._wgc.account_id()):
+                username = '%s_%s' % (self._wgc.account_realm(), xmpp_client.client_roster[jid]['name'])
+                friends.append(FriendInfo(userid, username))
 
         return friends
+
+    async def get_users(self, user_id_list: List[str]) -> List[UserInfo]:
+        result = list()
+        
+        xmpp_client = self.__xmpp_get_client()
+
+        userinfo = WoTPAPI.get_account_info(user_id_list)
+        for realm_id, users_dict in userinfo.items():
+            for user_id, user_data in users_dict.items():             
+                is_friend = await xmpp_client.is_friend(user_id)
+                username = '%s_%s' % (realm_id.upper(), user_data['nickname'])
+                userinfo = UserInfo(str(user_id), is_friend, username, None, Presence(PresenceState.Unknown))
+                result.append(userinfo)
+
+        return result
 
     def tick(self):
         self._localgames.tick()

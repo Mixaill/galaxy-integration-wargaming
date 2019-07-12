@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 import slixmpp
@@ -43,3 +44,16 @@ class WgcXMPP(slixmpp.ClientXMPP):
 
     def get_xmpp_domain(self) -> str:
         return XMPPRealms[self._game][self._realm]['domain']
+
+
+    #Roster checks
+    async def is_friend(self, account_id) -> bool:
+        while len(self.client_roster) == 0:
+            await asyncio.sleep(1)
+
+        for jid in self.client_roster:
+            friend_id = jid.split('@', 1)[0]
+            if friend_id == str(account_id):
+                return True
+        
+        return False
