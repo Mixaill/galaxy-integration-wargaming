@@ -139,6 +139,7 @@ class WGCApi:
     OUATH_URL_CHALLENGE = '/id/api/v2/account/credentials/create/oauth/token/challenge/'
     OAUTH_URL_TOKEN = '/id/api/v2/account/credentials/create/oauth/token/'
     
+    WGNI_URL_TOKEN1 = '/id/api/v2/account/credentials/create/token1/'
     WGNI_URL_ACCOUNTINFO = '/id/api/v2/account/info/'
 
     WGCPS_FETCH_PRODUCT_INFO = '/platform/api/v1/fetchProductList'
@@ -549,6 +550,50 @@ class WGCApi:
         result['exchange_code'] = body['exchange_code']
 
         return result
+
+    #
+    # Token1
+    #
+
+    def create_token1(self, requested_for : str) -> str:
+        resp = self.__wgni_create_token_1(requested_for)
+
+        if resp is None:
+            logging.error('wgc_api/create_token1: failed to create token1 for %s' % requested_for)
+            return None
+
+        if 'token' not in resp:
+            logging.error('wgc_api/create_token1: server response for %s does not contains token: %s' % (requested_for, resp))
+            return None
+
+        return resp['token']
+
+    def __wgni_create_token_1(self, requested_for : str):
+        if self._login_info is None:
+            logging.error('wgc_api/__wgni_create_token_1: login info is none')
+            return None
+
+        if 'realm' not in self._login_info:
+            logging.error('wgc_api/__wgni_create_token_1: login info does not contain realm')
+            return None
+
+        if 'access_token' not in self._login_info:
+            logging.error('wgc_api/__wgni_create_token_1: login info does not contain access_token')
+            return None
+
+        response = self._session.post(
+            self.__get_url('wgnet', self._login_info['realm'], self.WGNI_URL_TOKEN1), 
+            data = { 'requested_for' : requested_for, 'access_token' : self._login_info['access_token'] })
+        
+        while response.status_code == 202:
+            response = self._session.get(response.headers['Location'])
+
+        if response.status_code != 200:
+            logging.error('wgc_api/__wgni_create_token_1: error on creating token1: %s' % response.text)
+            return None
+
+        return json.loads(response.text)
+
 
     #
     # Account info
