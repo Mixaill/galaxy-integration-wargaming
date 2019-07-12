@@ -1,6 +1,7 @@
 import logging
 import os
 import sys
+from typing import List
 
 #expand sys.path
 thirdparty =  os.path.join(os.path.dirname(os.path.realpath(__file__)),'3rdparty\\')
@@ -18,7 +19,7 @@ sentry_sdk.init(
 from galaxy.api.consts import Platform
 from galaxy.api.errors import BackendError, InvalidCredentials
 from galaxy.api.plugin import Plugin, create_and_run_plugin
-from galaxy.api.types import Authentication, Game, LicenseInfo, LicenseType, LocalGame, LocalGameState, NextStep
+from galaxy.api.types import Authentication, Game, LicenseInfo, LicenseType, LocalGame, LocalGameState, NextStep, FriendInfo
 
 from localgames import LocalGames
 
@@ -29,6 +30,8 @@ class WargamingPlugin(Plugin):
         super().__init__(Platform.Wargaming, __version__, reader, writer, token)
 
         self._wgc = WGC()
+        self._xmpp = None
+
         self._localgames = LocalGames(self, self._wgc)
 
     async def authenticate(self, stored_credentials=None):
@@ -69,7 +72,7 @@ class WargamingPlugin(Plugin):
     async def get_local_games(self):
         return self._localgames.get_local_games()
 
-    async def get_owned_games(self):
+    async def get_owned_games(self):       
         owned_applications = list()
 
         for instance in self._wgc.get_owned_applications().values():
@@ -96,9 +99,27 @@ class WargamingPlugin(Plugin):
         if game is not None:
             game.UninstallGame()
 
+    async def get_friends(self) -> List[FriendInfo]:
+        friends = list()
+        xmpp_client = self.__xmpp_get_client()
+
+        for jid in xmpp_client.client_roster:
+            userid = jid.split('@', 1)[0]
+            username = xmpp_client.client_roster[jid]['name']
+            friends.append(FriendInfo(userid, username))
+
+
+        return friends
+
     def tick(self):
         self._localgames.tick()
 
+    def __xmpp_get_client(self):
+        if self._xmpp is None:
+            self._xmpp = self._wgc.get_xmpp_client('WOT')
+            self._xmpp.connect()
+
+        return self._xmpp
 
 def main():
     create_and_run_plugin(WargamingPlugin, sys.argv)

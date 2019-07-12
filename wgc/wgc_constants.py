@@ -17,3 +17,14 @@ WGCRealms = {
     'NA'   : {'domain_wgnet': 'na.wargaming.net'  , 'domain_wgcps' : 'wgcps-na.wargaming.net'  , 'domain_wguscs' : 'wguscs-wotru.wargaming.net', 'client_id': 'AJ5PLrEuz5C2d0hHmmjQJtjaMpueSahYY8CiswHE'},
     'ASIA' : {'domain_wgnet': 'asia.wargaming.net', 'domain_wgcps' : 'wgcps-asia.wargaming.net', 'domain_wguscs' : 'wguscs-wotru.wargaming.net', 'client_id': 'Xe2oDM8Z6A4N70VZIV8RyVLHpvdtVPYNRIIYBklJ'},
 }
+
+
+XMPPRealms = {
+    'WOT'  : {
+        'RU' : {
+            'host'  : 'wotru.xmpp.wargaming.net',
+            'port'  : 5222,
+            'domain': 'wot-ru.loc',
+        }
+    }
+}

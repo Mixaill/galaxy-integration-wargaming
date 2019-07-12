@@ -1,3 +1,4 @@
+import logging
 import os
 import subprocess
 from typing import Dict
@@ -7,6 +8,7 @@ from .wgc_api import WGCApi
 from .wgc_application_local import WGCLocalApplication
 from .wgc_application_owned import WGCOwnedApplication, WGCOwnedApplicationInstance
 from .wgc_location import WGCLocation
+from .wgc_xmpp import WgcXMPP
 
 class WGC():
     def __init__(self):
@@ -92,3 +94,24 @@ class WGC():
             applications_instances.update(application.get_application_instances())
 
         return applications_instances
+
+    # XMPP
+    
+    def get_xmpp_client(self, game) -> WgcXMPP :
+
+        realm = self._api.get_account_realm()
+        if realm is None:
+            logging.error('wgc/get_xmpp_wot: failed to get realm')
+            return None
+
+        account_id = self._api.get_account_id()
+        if account_id is None:
+            logging.error('wgc/get_xmpp_wot: failed to get account_id')
+            return None
+
+        token1 = self._api.create_token1('xmppcs')
+        if token1 is None:
+            logging.error('wgc/get_xmpp_wot: failed to get token1')
+
+        return WgcXMPP(game, realm, account_id, token1)
+
