@@ -12,6 +12,12 @@ GOG Galaxy 2.0 Wargaming Game Center integration
 
 ## Changelog
 
+* v. 0.7.0
+   * implemented receiving friends list
+   * implemented receiving user info
+   * improved error handling when servers are not responsible
+   * fixed error on retrieving WGC settings when WGC is not installed
+
 * v. 0.6.0
    * Implemented ability to install games. Ability to install games is implemented. Now this integration implements a minimal set of functions for everyday use!
    * Implemented login via OTP backup codes
