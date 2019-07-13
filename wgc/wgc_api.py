@@ -712,7 +712,7 @@ class WGCApi:
         showroom_response = self._session.get(url)
         
         if showroom_response.status_code != 200:
-            logging.error('wgc_auth/__wguscs_get_showroom: error on retrieving showroom data: %s' % response.text)
+            logging.error('wgc_auth/__wguscs_get_showroom: error on retrieving showroom data: %s' % showroom_response.text)
             return None
 
         return json.loads(showroom_response.text)
