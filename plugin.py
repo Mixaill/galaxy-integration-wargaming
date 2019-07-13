@@ -105,7 +105,10 @@ class WargamingPlugin(Plugin):
         xmpp_client = self.__xmpp_get_client()
 
         while len(xmpp_client.client_roster) == 0:
-            await asyncio.sleep(1)
+            try:
+                await asyncio.sleep(1)
+            except asyncio.CancelledError:
+                break
 
         for jid in xmpp_client.client_roster:
             userid = jid.split('@', 1)[0]

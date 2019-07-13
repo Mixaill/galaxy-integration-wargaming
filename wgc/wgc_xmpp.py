@@ -49,7 +49,10 @@ class WgcXMPP(slixmpp.ClientXMPP):
     #Roster checks
     async def is_friend(self, account_id) -> bool:
         while len(self.client_roster) == 0:
-            await asyncio.sleep(1)
+            try:
+                await asyncio.sleep(1)
+            except asyncio.CancelledError:
+                break
 
         for jid in self.client_roster:
             friend_id = jid.split('@', 1)[0]
