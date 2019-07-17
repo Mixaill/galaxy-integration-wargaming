@@ -51,7 +51,22 @@ SPAIDRealms = {
         'ASIA' : (2000000000, 3499999999)
 }
 
-WoTPAPIRealms = {
+PAPI_WGNET_REALMS = {
+    'RU' : {
+        'host': 'api.worldoftanks.ru',
+        'client_id' : 'ebe303a75bd983f67f21b43578a1e498'
+    },
+    'EU' : {
+        'host': 'api.worldoftanks.eu',
+        'client_id' : 'ebe303a75bd983f67f21b43578a1e498'
+    },
+    'NA' : {
+        'host': 'api.worldoftanks.com',
+        'client_id' : 'ebe303a75bd983f67f21b43578a1e498'
+    }
+}
+
+PAPI_WOT_REALMS = {
     'RU' : {
         'host': 'api.worldoftanks.ru',
         'client_id' : 'ebe303a75bd983f67f21b43578a1e498'

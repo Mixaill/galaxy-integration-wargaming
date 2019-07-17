@@ -1,7 +1,9 @@
 from .wgc import WGC
-from .wot_papi import WoTPAPI
+from .papi_wgnet import PAPIWgnet
+from .papi_wot import PAPIWoT
 
 __all__ = (
     'WGC'
-    'WoTPAPI'
+    'PAPIWgnet'
+    'PAPIWoT'
 )

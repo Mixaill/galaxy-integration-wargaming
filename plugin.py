@@ -24,7 +24,7 @@ from galaxy.api.types import Authentication, Game, LicenseInfo, LicenseType, Loc
 
 from localgames import LocalGames
 
-from wgc import WGC, WoTPAPI
+from wgc import WGC, PAPIWoT
 
 class WargamingPlugin(Plugin):
     def __init__(self, reader, writer, token):
@@ -123,7 +123,7 @@ class WargamingPlugin(Plugin):
         
         xmpp_client = self.__xmpp_get_client()
 
-        userinfo = WoTPAPI.get_account_info(user_id_list)
+        userinfo = PAPIWoT.get_account_info(user_id_list)
         for realm_id, users_dict in userinfo.items():
             for user_id, user_data in users_dict.items():             
                 is_friend = await xmpp_client.is_friend(user_id)

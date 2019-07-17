@@ -12,6 +12,12 @@ GOG Galaxy 2.0 Wargaming Game Center integration
 
 ## Changelog
 
+* v. 0.7.1
+   * updated Galaxy API to 0.42
+   * fixed incorrect variable name in `wgc_api::wguscs_get_showroom()`
+   * fixed exception on cancelled `asyncio.sleep()`
+   * fixed region handling in `PAPIWoT::get_account_info()` request
+
 * v. 0.7.0
    * implemented receiving friends list
    * implemented receiving user info
