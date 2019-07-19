@@ -84,3 +84,6 @@ PAPI_WOT_REALMS = {
         'client_id' : 'ebe303a75bd983f67f21b43578a1e498'
     }
 }
+
+FALLBACK_COUNTRY = ''
+FALLBACK_LANGUAGE = 'en'

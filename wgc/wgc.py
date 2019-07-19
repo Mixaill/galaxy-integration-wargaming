@@ -7,6 +7,7 @@ import xml.etree.ElementTree as ElementTree
 from .wgc_api import WGCApi
 from .wgc_application_local import WGCLocalApplication
 from .wgc_application_owned import WGCOwnedApplication, WGCOwnedApplicationInstance
+from .wgc_constants import FALLBACK_COUNTRY, FALLBACK_LANGUAGE
 from .wgc_location import WGCLocation
 from .wgc_xmpp import WgcXMPP
 
@@ -59,11 +60,18 @@ class WGC():
         return ''
 
     def get_wgc_language(self) -> str:
-        return self.__get_preferences_value('application/localization_manager/current_localization')
+        result = self.__get_preferences_value('application/localization_manager/current_localization')
+        if result == '':
+            result = FALLBACK_LANGUAGE
+
+        return result
 
     def get_country_code(self) -> str:
-        return self.__get_preferences_value('application/user_location_country_code')
+        result = self.__get_preferences_value('application/user_location_country_code')
+        if result == '':
+            result = FALLBACK_COUNTRY
 
+        return result
 
     # Tracking
 
