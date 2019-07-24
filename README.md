@@ -12,6 +12,11 @@ GOG Galaxy 2.0 Wargaming Game Center integration
 
 ## Changelog
 
+* v. 0.7.2
+   * updated Galaxy API to 0.43
+   * fixed incorrect game state update on game launch
+   * fixed requests to WG.net server when WGC is not installed
+
 * v. 0.7.1
    * updated Galaxy API to 0.42
    * fixed incorrect variable name in `wgc_api::wguscs_get_showroom()`

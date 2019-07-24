@@ -17,21 +17,21 @@ sentry_sdk.init(
     "https://965fd62de6974b1c8301b794a426238d@sentry.openwg.net/2",
     release=("galaxy-integration-wargaming@%s" % __version__))
 
-from galaxy.api.consts import Platform, PresenceState
+from galaxy.api.consts import Platform
 from galaxy.api.errors import BackendError, InvalidCredentials
 from galaxy.api.plugin import Plugin, create_and_run_plugin
-from galaxy.api.types import Authentication, Game, LicenseInfo, LicenseType, LocalGame, LocalGameState, NextStep, FriendInfo, UserInfo, Presence
+from galaxy.api.types import Authentication, Game, LicenseInfo, LicenseType, LocalGame, LocalGameState, NextStep, FriendInfo
 
 from localgames import LocalGames
 
-from wgc import WGC, PAPIWoT
+from wgc import WGC, PAPIWoT, WgcXMPP
 
 class WargamingPlugin(Plugin):
     def __init__(self, reader, writer, token):
         super().__init__(Platform.Wargaming, __version__, reader, writer, token)
 
         self._wgc = WGC()
-        self._xmpp = None
+        self._xmpp = dict()
 
         self._localgames = LocalGames(self, self._wgc)
 
@@ -82,7 +82,7 @@ class WargamingPlugin(Plugin):
         return owned_applications
 
     async def launch_game(self, game_id):
-        game = self._localgames.GetWgcGame(game_id)
+        game = self._localgames.get_wgc_game(game_id)
         if game is not None:
             game.RunExecutable()
         
@@ -96,13 +96,13 @@ class WargamingPlugin(Plugin):
         instances[game_id].install_application()
 
     async def uninstall_game(self, game_id):
-        game = self._localgames.GetWgcGame(game_id)
+        game = self._localgames.get_wgc_game(game_id)
         if game is not None:
             game.UninstallGame()
 
     async def get_friends(self):
         friends = list()
-        xmpp_client = self.__xmpp_get_client()
+        xmpp_client = self.__xmpp_get_client('WOT')
 
         while len(xmpp_client.client_roster) == 0:
             try:
@@ -118,30 +118,17 @@ class WargamingPlugin(Plugin):
 
         return friends
 
-    async def get_users(self, user_id_list: List[str]) -> List[UserInfo]:
-        result = list()
-        
-        xmpp_client = self.__xmpp_get_client()
-
-        userinfo = PAPIWoT.get_account_info(user_id_list)
-        for realm_id, users_dict in userinfo.items():
-            for user_id, user_data in users_dict.items():             
-                is_friend = await xmpp_client.is_friend(user_id)
-                username = '%s_%s' % (realm_id.upper(), user_data['nickname'])
-                userinfo = UserInfo(str(user_id), is_friend, username, None, Presence(PresenceState.Unknown))
-                result.append(userinfo)
-
-        return result
 
     def tick(self):
         self._localgames.tick()
 
-    def __xmpp_get_client(self):
-        if self._xmpp is None:
-            self._xmpp = self._wgc.get_xmpp_client('WOT')
-            self._xmpp.connect()
 
-        return self._xmpp
+    def __xmpp_get_client(self, client_type: str) -> WgcXMPP:
+        if client_type not in self._xmpp:
+            self._xmpp[client_type] = self._wgc.get_xmpp_client(client_type)
+            self._xmpp[client_type].connect()
+
+        return self._xmpp[client_type]
 
 def main():
     create_and_run_plugin(WargamingPlugin, sys.argv)
