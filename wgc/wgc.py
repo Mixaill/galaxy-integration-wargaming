@@ -91,8 +91,11 @@ class WGC():
     def get_local_applications(self) -> Dict[str, WGCLocalApplication]:
         apps = dict()
         for app_dir in WGCLocation.get_apps_dirs():
-            app = WGCLocalApplication(app_dir)
-            apps[app.GetId()] = app
+            try:
+                app = WGCLocalApplication(app_dir)
+                apps[app.GetId()] = app
+            except AttributeError:
+                logging.warning('Failed to load game metadata from folder %s. ' % app_dir)
 
         return apps
 
