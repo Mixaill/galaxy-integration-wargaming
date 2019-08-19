@@ -538,15 +538,16 @@ class WGCApi:
         body['exchange_code'] = ''.join(random.choices(string.digits+'ABCDEF', k=32))
         body['tid'] = self._tracking_id
 
-        r = self._session.post(self.__get_url('wgnet', realm, self.OAUTH_URL_TOKEN), data = body)
-        if r.status_code != 202:
+        response = self._session.post(self.__get_url('wgnet', realm, self.OAUTH_URL_TOKEN), data = body)
+
+        while response.status_code == 202:
+            response = self._session.get(response.headers['Location'])
+
+        if response.status_code != 200:
+            logging.error('wgc_auth/__oauth_token_get_bytoken: error on receiving token by token: %s' % response.text)
             return None
 
-        r2 = self._session.get(r.headers['Location'])
-        if r2.status_code != 200:
-            return None
-
-        result = json.loads(r2.text)
+        result = json.loads(response.text)
         result['exchange_code'] = body['exchange_code']
 
         return result
