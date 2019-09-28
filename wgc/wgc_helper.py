@@ -29,3 +29,11 @@ def scantree(path):
             yield from scantree(entry.path)
         else:
             yield entry
+
+### Names
+
+def fixup_gamename(name):
+    if name == 'STD2':
+        return 'Steel Division 2'
+
+    return name

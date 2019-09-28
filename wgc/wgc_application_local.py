@@ -2,7 +2,7 @@ import os
 import subprocess
 import xml.etree.ElementTree as ElementTree
 
-from .wgc_helper import DETACHED_PROCESS, is_mutex_exists
+from .wgc_helper import DETACHED_PROCESS, is_mutex_exists, fixup_gamename
 
 class WGCLocalApplication():
     
@@ -28,7 +28,7 @@ class WGCLocalApplication():
         return self._metadata.find('app_id').text
     
     def GetName(self) -> str:
-        return self._metadata.find('shortcut_name').text
+        return fixup_gamename(self._metadata.find('shortcut_name').text)
 
     def GetMutexName(self) -> str:
         return self._metadata.find('mutex_name').text

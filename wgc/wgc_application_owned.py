@@ -2,7 +2,7 @@ import logging
 import subprocess
 from typing import Dict
 
-from .wgc_helper import DETACHED_PROCESS
+from .wgc_helper import DETACHED_PROCESS, fixup_gamename
 from .wgc_location import WGCLocation
 
 class WGCOwnedApplicationInstance(object):
@@ -17,7 +17,7 @@ class WGCOwnedApplicationInstance(object):
         return self.get_application_id().split('.')[1]
 
     def get_application_name(self):
-        return self._name
+        return fixup_gamename(self._name)
 
     def get_application_fullname(self):
         if self.get_application_realm() == 'WW':
@@ -51,7 +51,7 @@ class WGCOwnedApplication():
             self._instances[instance_obj.get_application_id()] = instance_obj
 
     def get_application_name(self) -> str:
-        return self._data['game_name']
+        return fixup_gamename(self._data['game_name'])
 
     def get_application_instances(self) -> Dict[str, WGCOwnedApplicationInstance]:
         return self._instances
