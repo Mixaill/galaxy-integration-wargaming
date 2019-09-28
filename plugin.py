@@ -100,6 +100,9 @@ class WargamingPlugin(Plugin):
         if game is not None:
             game.UninstallGame()
 
+    async def launch_platform_client(self):
+        self._wgc.launch_client(True)
+
     async def get_friends(self):
         friends = list()
         xmpp_client = self.__xmpp_get_client('WOT')

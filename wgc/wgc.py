@@ -8,6 +8,7 @@ from .wgc_api import WGCApi
 from .wgc_application_local import WGCLocalApplication
 from .wgc_application_owned import WGCOwnedApplication, WGCOwnedApplicationInstance
 from .wgc_constants import FALLBACK_COUNTRY, FALLBACK_LANGUAGE
+from .wgc_helper import DETACHED_PROCESS
 from .wgc_location import WGCLocation
 from .wgc_xmpp import WgcXMPP
 
@@ -105,6 +106,11 @@ class WGC():
             applications_instances.update(application.get_application_instances())
 
         return applications_instances
+
+    # WGC Client
+
+    def launch_client(self, minimized: bool) -> None:
+        subprocess.Popen([WGCLocation.get_wgc_exe_path(), '--background' if minimized else ''], creationflags=DETACHED_PROCESS)
 
     # XMPP
     
