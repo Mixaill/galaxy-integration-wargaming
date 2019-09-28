@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 import os
 import sys
@@ -9,13 +10,16 @@ thirdparty =  os.path.join(os.path.dirname(os.path.realpath(__file__)),'3rdparty
 if thirdparty not in sys.path:
     sys.path.insert(0, thirdparty)
 
-from version import __version__
+#read manifest
+menifest = None
+with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "manifest.json")) as manifest:
+    manifest = json.load(manifest)
 
 #Start sentry
 import sentry_sdk
 sentry_sdk.init(
     "https://965fd62de6974b1c8301b794a426238d@sentry.openwg.net/2",
-    release=("galaxy-integration-wargaming@%s" % __version__))
+    release=("galaxy-integration-wargaming@%s" % manifest['version']))
 
 from galaxy.api.consts import Platform
 from galaxy.api.errors import BackendError, InvalidCredentials
@@ -28,7 +32,7 @@ from wgc import WGC, PAPIWoT, WgcXMPP
 
 class WargamingPlugin(Plugin):
     def __init__(self, reader, writer, token):
-        super().__init__(Platform.Wargaming, __version__, reader, writer, token)
+        super().__init__(Platform(manifest['platform']), manifest['version'], reader, writer, token)
 
         self._wgc = WGC()
         self._xmpp = dict()

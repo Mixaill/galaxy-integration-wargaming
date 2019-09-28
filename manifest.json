@@ -2,7 +2,7 @@
     "name": "Galaxy Wargaming plugin",
     "platform": "wargaming",
     "guid": "91728e8a-33c3-4b6d-8382-4dd31043dec1",
-    "version": "0.7.3",
+    "version": "0.7.4",
     "description": "Galaxy Wargaming plugin",
     "author": "Mikhail Paulyshka",
     "email": "mixail@modxvm.com",
