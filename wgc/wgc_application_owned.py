@@ -20,7 +20,10 @@ class WGCOwnedApplicationInstance(object):
         return self._name
 
     def get_application_fullname(self):
-        return '%s (%s)' % (self.get_application_name(), self.get_application_realm())
+        if self.get_application_realm() == 'WW':
+            return self.get_application_name()
+        else:
+            return '%s (%s)' % (self.get_application_name(), self.get_application_realm())
 
     def get_application_install_url(self):
         return '%s@%s' % (self.get_application_id(), self.get_update_service_url())
