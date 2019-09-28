@@ -13,8 +13,14 @@ class WGCOwnedApplicationInstance(object):
     def get_application_id(self):
         return self._data['application_id']
 
+    def get_application_realm(self):
+        return self.get_application_id().split('.')[1]
+
+    def get_application_name(self):
+        return self._name
+
     def get_application_fullname(self):
-        return '%s (%s)' % (self._name, self._data['realm_id'])
+        return '%s (%s)' % (self.get_application_name(), self.get_application_realm())
 
     def get_application_install_url(self):
         return '%s@%s' % (self.get_application_id(), self.get_update_service_url())

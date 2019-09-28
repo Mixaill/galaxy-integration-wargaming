@@ -145,7 +145,7 @@ class WGCApi:
     WGCPS_FETCH_PRODUCT_INFO = '/platform/api/v1/fetchProductList'
     WGCPS_LOGINSESSION = '/auth/api/v1/loginSession'
     
-    WGUSCS_SHOWROOM = '/api/v15/content/showroom/'
+    WGUSCS_SHOWROOM = '/api/v16/content/showroom/'
 
     LOCALSERVER_HOST = '127.0.0.1'
     LOCALSERVER_PORT = 13337
@@ -641,7 +641,7 @@ class WGCApi:
             logging.error('wgc_api/fetch_product_list: error on retrieving showroom data')
             return product_list
 
-        for product in showroom_data['showcase']:
+        for product in showroom_data['data']['showcase']:
             product_list.append(WGCOwnedApplication(product))
 
         return product_list
