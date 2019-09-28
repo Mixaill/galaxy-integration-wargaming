@@ -150,6 +150,8 @@ class WGCApi:
     LOCALSERVER_HOST = '127.0.0.1'
     LOCALSERVER_PORT = 13337
 
+    GAMES_F2P = ['WOT', 'WOWS', 'WOWP']
+
     def __init__(self, tracking_id : str = '', country_code : str = '', language_code : str = 'en'):
         self._tracking_id = tracking_id
         self._country_code = country_code
@@ -630,11 +632,13 @@ class WGCApi:
         product_list = list()
 
         additional_gameurls = list()
+        purchased_gameids = list()
         wgcps_product_list = self.__wgcps_fetch_product_list()
         if wgcps_product_list is not None:
             for game_data in wgcps_product_list['data']['product_content']:
                 wgc_data = game_data['metadata']['wgc']
                 additional_gameurls.append('%s@%s' % (wgc_data['application_id']['data'], wgc_data['update_url']['data']))
+                purchased_gameids.append(wgc_data['application_id']['data'].split('.')[0])
 
         showroom_data = self.__wguscs_get_showroom(additional_gameurls)
         if showroom_data is None:
@@ -642,7 +646,14 @@ class WGCApi:
             return product_list
 
         for product in showroom_data['data']['showcase']:
-            product_list.append(WGCOwnedApplication(product))
+            app = WGCOwnedApplication(product)
+            if not app.get_application_instances():
+                continue
+
+            app_gameid = list(app.get_application_instances().values())[0].get_application_gameid()
+            
+            if app_gameid in self.GAMES_F2P or app_gameid in purchased_gameids:
+                product_list.append(app)
 
         return product_list
 

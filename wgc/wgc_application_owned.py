@@ -13,6 +13,9 @@ class WGCOwnedApplicationInstance(object):
     def get_application_id(self):
         return self._data['application_id']
 
+    def get_application_gameid(self):
+        return self.get_application_id().split('.')[0]
+
     def get_application_realm(self):
         return self.get_application_id().split('.')[1]
 
