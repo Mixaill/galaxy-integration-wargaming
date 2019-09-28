@@ -81,7 +81,8 @@ class WargamingPlugin(Plugin):
         owned_applications = list()
 
         for instance in self._wgc.get_owned_applications().values():
-            owned_applications.append(Game(instance.get_application_id(), instance.get_application_fullname(), None, LicenseInfo(LicenseType.FreeToPlay, None)))
+            license_info = LicenseInfo(LicenseType.SinglePurchase if instance.is_application_purchased() else LicenseType.FreeToPlay, None)
+            owned_applications.append(Game(instance.get_application_id(), instance.get_application_fullname(), None, license_info))
 
         return owned_applications
 

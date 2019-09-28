@@ -646,14 +646,21 @@ class WGCApi:
             return product_list
 
         for product in showroom_data['data']['showcase']:
-            app = WGCOwnedApplication(product)
-            if not app.get_application_instances():
+            #check that instances are exists
+            if not product['instances']:
+                logging.warn('wgc_api/fetch_product_list: product has no instances %s' % product)
                 continue
 
-            app_gameid = list(app.get_application_instances().values())[0].get_application_gameid()
-            
+            #prase game id
+            app_gameid = None
+            try:
+                app_gameid = product['instances'][0]['application_id'].split('.')[0]
+            except:
+                logging.exception('wgc_api/fetch_product_list: failed to get app_id')
+
             if app_gameid in self.GAMES_F2P or app_gameid in purchased_gameids:
-                product_list.append(app)
+                is_purchased = app_gameid in purchased_gameids and app_gameid not in self.GAMES_F2P
+                product_list.append(WGCOwnedApplication(product, is_purchased))
 
         return product_list
 
