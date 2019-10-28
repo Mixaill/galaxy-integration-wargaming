@@ -96,7 +96,7 @@ class WGC():
                 app = WGCLocalApplication(app_dir)
                 apps[app.GetId()] = app
             except AttributeError:
-                logging.warning('Failed to load game metadata from folder %s. ' % app_dir)
+                logging.exception('WGC/get_local_applications: Failed to load game metadata from folder %s. ' % app_dir)
 
         return apps
 
