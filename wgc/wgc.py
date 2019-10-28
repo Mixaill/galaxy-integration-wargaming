@@ -100,10 +100,18 @@ class WGC():
 
         return apps
 
-    def get_owned_applications(self) -> Dict[str, WGCOwnedApplicationInstance]:
+    def get_owned_applications(self, target_realm: str = None) -> Dict[str, WGCOwnedApplicationInstance]:
         applications_instances = dict()
         for application in self._api.fetch_product_list():
-            applications_instances.update(application.get_application_instances())
+            for key, application_instance in application.get_application_instances().items():
+
+                #skip if realm is not match our target
+                realm = application_instance.get_application_realm()
+                if target_realm is not None:
+                    if realm != 'WW' and realm != target_realm:
+                        continue
+                
+                applications_instances[key] = application_instance
 
         return applications_instances
 
