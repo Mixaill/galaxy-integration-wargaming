@@ -7,7 +7,7 @@ import xml.etree.ElementTree as ElementTree
 from .wgc_api import WGCApi
 from .wgc_application_local import WGCLocalApplication
 from .wgc_application_owned import WGCOwnedApplication, WGCOwnedApplicationInstance
-from .wgc_constants import FALLBACK_COUNTRY, FALLBACK_LANGUAGE
+from .wgc_constants import FALLBACK_COUNTRY, FALLBACK_LANGUAGE, WGCInstallDocs
 from .wgc_helper import DETACHED_PROCESS
 from .wgc_location import WGCLocation
 from .wgc_xmpp import WgcXMPP
@@ -117,8 +117,17 @@ class WGC():
 
     # WGC Client
 
+    def is_wgc_installed(self) -> bool:
+        return WGCLocation.is_wgc_installed()
+
+    def get_wgc_install_url(self) -> str:
+        return WGCInstallDocs[self.account_realm()]
+ 
     def launch_client(self, minimized: bool) -> None:
-        subprocess.Popen([WGCLocation.get_wgc_exe_path(), '--background' if minimized else ''], creationflags=DETACHED_PROCESS)
+        if self.is_wgc_installed():
+            subprocess.Popen([WGCLocation.get_wgc_exe_path(), '--background' if minimized else ''], creationflags=DETACHED_PROCESS)
+        else:
+            logging.warning('WGC/launch_client: WGC is not installed')
 
     # XMPP
     

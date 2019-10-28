@@ -10,6 +10,12 @@ class WGCAuthorizationResult(Enum):
     ACCOUNT_NOT_FOUND = 6
     INCORRECT_2FA_BACKUP = 7
 
+WGCInstallDocs = {
+    'RU'   : 'https://ru.wargaming.net/support/ru/products/wgc/article/23738/',
+    'EU'   : 'https://eu.wargaming.net/support/en/products/wgc/article/10301',
+    'NA'   : 'https://worldoftanks.com/en/news/announcements/wgc-final-migration/',
+    'ASIA' : 'https://asia.wargaming.net/support/en/products/wgc/article/21842/',
+}
 
 WGCRealms = { 
     'RU'   : {'domain_wgnet': 'ru.wargaming.net'  , 'domain_wgcps' : 'wgcps-ru.wargaming.net'  , 'domain_wguscs' : 'wguscs-wotru.wargaming.net', 'client_id': '77cxLwtEJ9uvlcm2sYe4O8viIIWn1FEWlooMTTqF'},

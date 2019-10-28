@@ -25,6 +25,7 @@ from galaxy.api.consts import Platform
 from galaxy.api.errors import BackendError, InvalidCredentials
 from galaxy.api.plugin import Plugin, create_and_run_plugin
 from galaxy.api.types import Authentication, Game, LicenseInfo, LicenseType, LocalGame, LocalGameState, NextStep, FriendInfo
+import webbrowser
 
 from localgames import LocalGames
 
@@ -90,23 +91,29 @@ class WargamingPlugin(Plugin):
         game = self._localgames.get_wgc_game(game_id)
         if game is not None:
             game.RunExecutable()
-        
-    async def install_game(self, game_id):
-        instances = self._wgc.get_owned_applications(self._wgc.account_realm())
 
+
+    async def install_game(self, game_id):
+        if not self._wgc.is_wgc_installed():
+            webbrowser.open(self._wgc.get_wgc_install_url())
+
+        instances = self._wgc.get_owned_applications(self._wgc.account_realm())
         if game_id not in instances:
             logging.warning('plugin/install_games: failed to find the application with id %s' % game_id)
             raise BackendError()
         
         instances[game_id].install_application()
 
+
     async def uninstall_game(self, game_id):
         game = self._localgames.get_wgc_game(game_id)
         if game is not None:
             game.UninstallGame()
 
+
     async def launch_platform_client(self):
         self._wgc.launch_client(True)
+
 
     async def get_friends(self):
         friends = list()
