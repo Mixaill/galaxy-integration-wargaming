@@ -1,4 +1,5 @@
-pycryptodome == 3.8.2
+galaxy.plugin.api == 0.55
+pycryptodome == 3.9.0
 requests == 2.22.0
-sentry_sdk == 0.10.0
+sentry_sdk == 0.13.1
 slixmpp == 1.4.2
