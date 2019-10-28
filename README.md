@@ -4,7 +4,7 @@ GOG Galaxy 2.0 Wargaming Game Center integration
 
 ## Installation
 
-* Clone repository to `%localappdata%\GOG.com\Galaxy\plugins\installed\wargaming\`
+* Unpack latest archive from https://github.com/Mixaill/galaxy-integration-wargaming/releases to `%localappdata%\GOG.com\Galaxy\plugins\installed\wargaming\`
 
 ## Changelog
 
