@@ -27,18 +27,21 @@ from galaxy.api.plugin import Plugin, create_and_run_plugin
 from galaxy.api.types import Authentication, Game, LicenseInfo, LicenseType, LocalGame, LocalGameState, NextStep, FriendInfo
 import webbrowser
 
-from localgames import LocalGames
-
 from wgc import WGC, PAPIWoT, WgcXMPP
 
 class WargamingPlugin(Plugin):
+
+    SLEEP_CHECK_INSTANCES = 30
+
     def __init__(self, reader, writer, token):
         super().__init__(Platform(manifest['platform']), manifest['version'], reader, writer, token)
 
         self._wgc = WGC()
         self._xmpp = dict()
 
-        self._localgames = LocalGames(self, self._wgc)
+        self.__task_check_for_instances = None
+        self.__local_games_states = dict()
+        self.__local_applications = dict()
 
     async def authenticate(self, stored_credentials=None):
         if not stored_credentials:
@@ -75,8 +78,14 @@ class WargamingPlugin(Plugin):
         self.store_credentials(login_info)
         return Authentication(self._wgc.account_id(), '%s_%s' % (self._wgc.account_realm(), self._wgc.account_nickname()))
 
-    async def get_local_games(self):
-        return self._localgames.get_local_games()
+    async def get_local_games(self)-> List[LocalGame]:
+        self.__rescan_games(False)
+
+        result = list()
+        for id, state in self.__local_games_states.items():
+            result.append(LocalGame(id,state)) 
+
+        return result
 
     async def get_owned_games(self):       
         owned_applications = list()
@@ -87,10 +96,10 @@ class WargamingPlugin(Plugin):
 
         return owned_applications
 
+
     async def launch_game(self, game_id):
-        game = self._localgames.get_wgc_game(game_id)
-        if game is not None:
-            game.RunExecutable()
+        self.__local_applications[game_id].RunExecutable()
+        self.update_local_game_status(LocalGame(game_id, LocalGameState.Installed | LocalGameState.Running))
 
 
     async def install_game(self, game_id):
@@ -106,9 +115,7 @@ class WargamingPlugin(Plugin):
 
 
     async def uninstall_game(self, game_id):
-        game = self._localgames.get_wgc_game(game_id)
-        if game is not None:
-            game.UninstallGame()
+        self.__local_applications[game_id].UninstallGame()
 
 
     async def launch_platform_client(self):
@@ -135,9 +142,43 @@ class WargamingPlugin(Plugin):
 
 
     def tick(self):
-        self._localgames.tick()
+        if not self.__task_check_for_instances or self.__task_check_for_instances.done():
+            self.__task_check_for_game_instances = self.create_task(self.task_check_for_instances(), "task_check_for_instances")
 
 
+    async def task_check_for_instances(self):
+        self.__rescan_games(True)
+        await asyncio.sleep(self.SLEEP_CHECK_INSTANCES)
+
+
+    def __rescan_games(self, notify = False):
+        self.__local_applications = self._wgc.get_local_applications()
+
+        #delete uninstalled games
+        for id in self.__local_games_states:
+            if id not in self.__local_applications:
+                self.__local_games_states.pop(id)
+                self.update_local_game_status(LocalGame(id, LocalGameState.None_))
+
+        #change status of installed games
+        for id, game in self.__local_applications.items():
+            status_changed = False
+            new_state = LocalGameState.Installed | LocalGameState.Running if game.IsRunning() else LocalGameState.Installed
+
+            if id not in self.__local_games_states:
+                status_changed = True
+            elif new_state != self.__local_games_states[id]:
+                status_changed = True
+            self.__local_games_states[id] = new_state
+
+            if notify and status_changed:
+                self.update_local_game_status(LocalGame(id, new_state))
+
+
+    #
+    # XMPP
+    #
+   
     def __xmpp_get_client(self, client_type: str) -> WgcXMPP:
         if client_type not in self._xmpp:
             self._xmpp[client_type] = self._wgc.get_xmpp_client(client_type)
