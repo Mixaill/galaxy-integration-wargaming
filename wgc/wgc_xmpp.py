@@ -17,6 +17,9 @@ class WgcXMPP(slixmpp.ClientXMPP):
         #enable authentication via unencrypted PLAIN
         self['feature_mechanisms'].unencrypted_plain = True
 
+        #disable aiodns
+        self.use_aiodns = False
+
         self.add_event_handler('session_start', self.on_session_start)
 
     def connect(self):
