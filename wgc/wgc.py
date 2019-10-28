@@ -92,6 +92,10 @@ class WGC():
     def get_local_applications(self) -> Dict[str, WGCLocalApplication]:
         apps = dict()
         for app_dir in WGCLocation.get_apps_dirs():
+            #skip missing directories
+            if not os.path.exists(app_dir):
+                continue
+            
             try:
                 app = WGCLocalApplication(app_dir)
                 apps[app.GetId()] = app
