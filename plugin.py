@@ -105,6 +105,7 @@ class WargamingPlugin(Plugin):
     async def install_game(self, game_id):
         if not self._wgc.is_wgc_installed():
             webbrowser.open(self._wgc.get_wgc_install_url())
+            return
 
         instances = self._wgc.get_owned_applications(self._wgc.account_realm())
         if game_id not in instances:
