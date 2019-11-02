@@ -18,7 +18,7 @@ with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "manifest.jso
 #Start sentry
 import sentry_sdk
 sentry_sdk.init(
-    "https://965fd62de6974b1c8301b794a426238d@sentry.openwg.net/2",
+    "https://b9055b733b99493bb3f4dd4855e0e990@sentry.friends-of-friends-of-galaxy.org/2",
     release=("galaxy-integration-wargaming@%s" % manifest['version']))
 
 from galaxy.api.consts import Platform
