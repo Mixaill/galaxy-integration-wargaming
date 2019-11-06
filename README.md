@@ -10,7 +10,7 @@ GOG Galaxy 2.0 Wargaming Game Center integration
 
 * https://github.com/Mixaill/galaxy-integration-wargaming/releases
 
-## Crahreporting
+## Crashreporting
 
 This integration uses Sentry to automatically track bugs:
 * Log entries with `error` or `exception` levels will be send to https://sentry.friends-of-friends-of-galaxy.org/ .
