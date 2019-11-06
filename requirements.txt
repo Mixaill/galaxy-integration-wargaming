@@ -1,5 +1,5 @@
 galaxy.plugin.api == 0.55
-pycryptodome == 3.9.0
+pysha3 == 1.0.2
 requests == 2.22.0
 sentry_sdk == 0.13.1
 slixmpp == 1.4.2

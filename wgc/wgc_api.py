@@ -12,8 +12,8 @@ import threading
 from urllib.parse import parse_qs
 from typing import Dict, List
 
-from Crypto.Hash import keccak
 import requests
+import sha3
 
 from .wgc_application_owned import WGCOwnedApplication
 from .wgc_constants import WGCAuthorizationResult, WGCRealms
@@ -493,11 +493,10 @@ class WGCApi:
 
         pow_number = 0
         while True:
-            keccak_hash = keccak.new(digest_bits=512)
+            keccak_hash = sha3.keccak_512()
             keccak_hash.update(hashcash_str+str(pow_number).encode('utf-8'))
-            digest = keccak_hash.hexdigest()
 
-            if digest.startswith(prefix):
+            if keccak_hash.hexdigest().startswith(prefix):
                 return pow_number
 
             pow_number = pow_number + 1
