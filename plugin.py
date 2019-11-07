@@ -35,6 +35,27 @@ import webbrowser
 from wgc import WGC, PAPIWoT, WgcXMPP
 
 class WargamingPlugin(Plugin):
+    """
+    Wargaming Plugin for GOG Galaxy
+
+    Implemented features:
+      * ImportOwnedGames
+      * ImportInstalledGames
+      * LaunchGame
+      * InstallGame
+      * UninstallGame
+      * LaunchPlatformClient
+      * ImportFriends
+      * ImportOSCompatibility
+      * ImportUserPresence
+
+    Missing features:
+      * ImportAchievements
+      * ShutdownPlatformClient
+      * ImportGameTime
+      * ImportGameLibrarySettings
+
+    """
 
     SLEEP_CHECK_INSTANCES = 30
 
@@ -45,7 +66,7 @@ class WargamingPlugin(Plugin):
         self._wgc = WGC()
         self._xmpp = dict()
 
-        self.__task_check_for_instances = None
+        self.__task_check_for_instances_obj = None
         self.__local_games_states = dict()
         self.__local_applications = dict()
 
@@ -57,6 +78,9 @@ class WargamingPlugin(Plugin):
         else:
             logging.error('plugin/__init__: unknown platform %s' % platform)
 
+    #
+    # Authentication
+    #
 
     async def authenticate(self, stored_credentials=None):
         if not stored_credentials:
@@ -93,16 +117,11 @@ class WargamingPlugin(Plugin):
         self.store_credentials(login_info)
         return Authentication(self._wgc.account_id(), '%s_%s' % (self._wgc.account_realm(), self._wgc.account_nickname()))
 
-    async def get_local_games(self)-> List[LocalGame]:
-        self.__rescan_games(False)
+    #
+    # ImportOwnedGames
+    #
 
-        result = list()
-        for id, state in self.__local_games_states.items():
-            result.append(LocalGame(id,state)) 
-
-        return result
-
-    async def get_owned_games(self):       
+    async def get_owned_games(self) -> List[Game]:     
         owned_applications = list()
 
         for instance in self._wgc.get_owned_applications(self._wgc.account_realm()).values():
@@ -111,13 +130,32 @@ class WargamingPlugin(Plugin):
 
         return owned_applications
 
+    #
+    # ImportInstalledGames
+    #
 
-    async def launch_game(self, game_id):
+    async def get_local_games(self) -> List[LocalGame]:
+        self.__rescan_games(False)
+
+        result = list()
+        for id, state in self.__local_games_states.items():
+            result.append(LocalGame(id,state)) 
+
+        return result
+
+    #
+    # LaunchGame
+    #
+
+    async def launch_game(self, game_id: str) -> None:
         self.__local_applications[game_id].RunExecutable(self.__platform)
         self.__change_game_status(game_id, LocalGameState.Installed | LocalGameState.Running)
 
+    #
+    # InstallGame
+    #
 
-    async def install_game(self, game_id):
+    async def install_game(self, game_id: str) -> None:
         if not self._wgc.is_wgc_installed():
             webbrowser.open(self._wgc.get_wgc_install_url())
             return
@@ -129,24 +167,90 @@ class WargamingPlugin(Plugin):
         
         instances[game_id].install_application()
 
+    #
+    # UninstallGame
+    #
 
-    async def uninstall_game(self, game_id):
+    async def uninstall_game(self, game_id: str) -> None:
         self.__local_applications[game_id].UninstallGame()
 
+    #
+    # LaunchPlatformClient
+    #
 
-    async def launch_platform_client(self):
+    async def launch_platform_client(self) -> None:
         self._wgc.launch_client(True)
 
+    #
+    # ImportFriends
+    #
+
+    async def get_friends(self) -> List[FriendInfo]:
+        xmpp_client = self.__xmpp_get_client('WOT')
+
+        friends = list()
+        for friend_id, friend_name in (await xmpp_client.get_friends()).items():
+            friends.append(FriendInfo(friend_id, friend_name))
+
+        return friends
+
+    #
+    # ImportOSCompatibility
+    #
+
+    async def get_os_compatibility(self, game_id: str, context: Any) -> Optional[OSCompatibility]:
+        if game_id not in self.__local_applications:
+            logging.warning('plugin/get_os_compatibility: unknown game_id %s' % game_id)
+            return None
+
+        result = 0
+        for platform in self.__local_applications[game_id].GetOsCompatibility():
+            if platform == 'windows':
+                result |= OSCompatibility.Windows
+            elif platform == 'macos':
+                result |= OSCompatibility.MacOS
+            elif platform == 'linux':
+                result |= OSCompatibility.Linux
+            else:
+                logging.error('plugin/get_os_compatibility: unknown platform %s' % platform)
+
+        return result
+
+    #
+    # ImportUserPresence
+    #
+
+    async def get_user_presence(self, user_id: str, context: Any) -> UserPresence:
+        xmpp_client = self.__xmpp_get_client('WOT')
+        xmpp_state = await xmpp_client.get_presence(user_id)
+
+        presence_state = PresenceState.Unknown
+        if xmpp_state == 'online':
+            presence_state = PresenceState.Online
+        elif xmpp_state == 'offline':
+            presence_state = PresenceState.Offline
+        elif xmpp_state == 'unknown':
+            presence_state = PresenceState.Unknown
+        else:
+            logging.eror('plugin/get_user_presence: unknown presence state %s' % xmpp_state)
+
+        return UserPresence(presence_state, None, None, None)
+
+    #
+    # Other
+    #
 
     def tick(self):
-        if not self.__task_check_for_instances or self.__task_check_for_instances.done():
-            self.__task_check_for_instances = self.create_task(self.task_check_for_instances(), "task_check_for_instances")
+        if not self.__task_check_for_instances_obj or self.__task_check_for_instances_obj.done():
+            self.__task_check_for_instances_obj = self.create_task(self.__task_check_for_instances(), "task_check_for_instances")
 
+    #
+    # Internals
+    #
 
-    async def task_check_for_instances(self):
+    async def __task_check_for_instances(self):
         self.__rescan_games(True)
         await asyncio.sleep(self.SLEEP_CHECK_INSTANCES)
-
 
     def __rescan_games(self, notify = False):
         self.__local_applications = self._wgc.get_local_applications()
@@ -173,73 +277,13 @@ class WargamingPlugin(Plugin):
         self.__local_games_states[game_id] = new_state
         self.update_local_game_status(LocalGame(game_id, new_state))
 
-    #
-    # XMPP
-    #
-   
+
     def __xmpp_get_client(self, client_type: str) -> WgcXMPP:
         if client_type not in self._xmpp:
             self._xmpp[client_type] = self._wgc.get_xmpp_client(client_type)
             self._xmpp[client_type].connect()
 
         return self._xmpp[client_type]
-
-    #
-    # ImportOSCompatibility
-    #
-
-    async def get_os_compatibility(self, game_id: str, context: Any) -> Optional[OSCompatibility]:
-        if game_id not in self.__local_applications:
-            logging.warning('plugin/get_os_compatibility: unknown game_id %s' % game_id)
-            return None
-
-        result = 0
-        for platform in self.__local_applications[game_id].GetOsCompatibility():
-            if platform == 'windows':
-                result |= OSCompatibility.Windows
-            elif platform == 'macos':
-                result |= OSCompatibility.MacOS
-            elif platform == 'linux':
-                result |= OSCompatibility.Linux
-            else:
-                logging.error('plugin/get_os_compatibility: unknown platform %s' % platform)
-
-        return result
-
-
-    #
-    # ImportFriends
-    #
-
-    async def get_friends(self) -> List[FriendInfo]:
-        xmpp_client = self.__xmpp_get_client('WOT')
-
-        friends = list()
-        for friend_id, friend_name in (await xmpp_client.get_friends()).items():
-            friends.append(FriendInfo(friend_id, friend_name))
-
-        return friends
-
-
-    #
-    # ImportUserPresence
-    #
-
-    async def get_user_presence(self, user_id: str, context: Any) -> UserPresence:
-        xmpp_client = self.__xmpp_get_client('WOT')
-        xmpp_state = await xmpp_client.get_presence(user_id)
-
-        presence_state = PresenceState.Unknown
-        if xmpp_state == 'online':
-            presence_state = PresenceState.Online
-        elif xmpp_state == 'offline':
-            presence_state = PresenceState.Offline
-        elif xmpp_state == 'unknown':
-            presence_state = PresenceState.Unknown
-        else:
-            logging.eror('plugin/get_user_presence: unknown presence state %s' % xmpp_state)
-
-        return UserPresence(presence_state, None, None, None)
 
 
 def main():
