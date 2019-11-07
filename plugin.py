@@ -15,6 +15,10 @@ menifest = None
 with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "manifest.json")) as manifest:
     manifest = json.load(manifest)
 
+#disable urllib3 logging
+import urllib3
+logging.getLogger("urllib3").propagate = False
+
 #Start sentry
 import sentry_sdk
 sentry_sdk.init(
