@@ -2,8 +2,9 @@ import asyncio
 import json
 import logging
 import os
+import platform
 import sys
-from typing import List
+from typing import Any, List, Optional
 
 #expand sys.path
 thirdparty =  os.path.join(os.path.dirname(os.path.realpath(__file__)),'3rdparty\\')
@@ -25,7 +26,7 @@ sentry_sdk.init(
     "https://b9055b733b99493bb3f4dd4855e0e990@sentry.friends-of-friends-of-galaxy.org/2",
     release=("galaxy-integration-wargaming@%s" % manifest['version']))
 
-from galaxy.api.consts import Platform
+from galaxy.api.consts import OSCompatibility, Platform
 from galaxy.api.errors import BackendError, InvalidCredentials
 from galaxy.api.plugin import Plugin, create_and_run_plugin
 from galaxy.api.types import Authentication, Game, LicenseInfo, LicenseType, LocalGame, LocalGameState, NextStep, FriendInfo
@@ -37,6 +38,7 @@ class WargamingPlugin(Plugin):
 
     SLEEP_CHECK_INSTANCES = 30
 
+
     def __init__(self, reader, writer, token):
         super().__init__(Platform(manifest['platform']), manifest['version'], reader, writer, token)
 
@@ -46,6 +48,15 @@ class WargamingPlugin(Plugin):
         self.__task_check_for_instances = None
         self.__local_games_states = dict()
         self.__local_applications = dict()
+
+        self.__platform = 'unknown'
+        if platform.system() == 'Windows':
+            self.__platform = 'windows'
+        elif platform.system() == 'Darwin':
+            self.__platform = 'macos'
+        else:
+            logging.error('plugin/__init__: unknown platform %s' % platform)
+
 
     async def authenticate(self, stored_credentials=None):
         if not stored_credentials:
@@ -102,7 +113,7 @@ class WargamingPlugin(Plugin):
 
 
     async def launch_game(self, game_id):
-        self.__local_applications[game_id].RunExecutable()
+        self.__local_applications[game_id].RunExecutable(self.__platform)
         self.update_local_game_status(LocalGame(game_id, LocalGameState.Installed | LocalGameState.Running))
 
 
@@ -190,6 +201,28 @@ class WargamingPlugin(Plugin):
             self._xmpp[client_type].connect()
 
         return self._xmpp[client_type]
+
+    #
+    # ImportOSCompatibility
+    #
+
+    async def get_os_compatibility(self, game_id: str, context: Any) -> Optional[OSCompatibility]:
+        if game_id not in self.__local_applications:
+            logging.warning('plugin/get_os_compatibility: unknown game_id %s' % game_id)
+            return None
+
+        result = 0
+        for platform in self.__local_applications[game_id].GetOsCompatibility():
+            if platform == 'windows':
+                result |= OSCompatibility.Windows
+            elif platform == 'macos':
+                result |= OSCompatibility.MacOS
+            elif platform == 'linux':
+                result |= OSCompatibility.Linux
+            else:
+                logging.error('plugin/get_os_compatibility: unknown platform %s' % platform)
+
+        return result
 
 def main():
     create_and_run_plugin(WargamingPlugin, sys.argv)

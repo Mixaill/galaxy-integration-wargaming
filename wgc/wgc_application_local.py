@@ -2,6 +2,7 @@ import logging
 import os
 import subprocess
 import xml.etree.ElementTree as ElementTree
+from typing import Dict, List
 
 from .wgc_helper import DETACHED_PROCESS, is_mutex_exists, fixup_gamename
 
@@ -79,24 +80,38 @@ class WGCLocalApplication():
         return result.text
 
 
-    def GetExecutableName(self) -> str:
+    def GetExecutableNames(self) -> Dict[str,str]:
+        result = dict()
+
         # metadata v5
-        result = self.__metadata.find('executable_name')
+        node = self.__metadata.find('executable_name')
+        if node is not None:
+            result['windows'] = node.text
         
         #metadata v6
-        if result is None:
-            for executable in self.__metadata.find('predefined_section/executables'):
-                if 'arch' not in executable.attrib:
-                    result = executable
-                    break
+        node = self.__metadata.find('predefined_section/executables')
+        if node is not None:
+            for executable in node:
+                platform = 'windows'
+                if 'emul' in executable.attrib:
+                    if executable.attrib['emul'] == 'wgc_mac':
+                        platform = 'macos'
+
+                result[platform] = executable.text
 
         #unknown version
-        if result is None:
-            logging.error('WGCLocalApplication/GetExecutableName: None object')
+        if not result:
+            logging.error('WGCLocalApplication/GetExecutableName: failed to find executables')
             return None
 
-        return result.text
+        return result
 
+    def GetOsCompatibility(self) -> List[str]:
+        executables = self.GetExecutableNames()
+        if executables is None:
+            logging.warning('WGCLocalApplication/GetOsCompatibility: None object')
+
+        return executables.keys()
 
     def IsInstalled(self) -> str:
         return bool(self.__gameinfo.find('game/installed').text)
@@ -107,14 +122,14 @@ class WGCLocalApplication():
     def IsRunning(self) -> bool:
         return is_mutex_exists(self.GetMutexName())
 
-    def GetExecutablePath(self) -> str:
-        return os.path.join(self.GetGameFolder(), self.GetExecutableName())
+    def GetExecutablePath(self, platform) -> str:
+        return os.path.join(self.GetGameFolder(), self.GetExecutableNames()[platform])
 
     def GetWgcapiPath(self) -> str:
         return os.path.join(self.GetGameFolder(), self.WGCAPI_FILE)
 
-    def RunExecutable(self) -> None:
-        subprocess.Popen([self.GetExecutablePath()], creationflags=DETACHED_PROCESS)
+    def RunExecutable(self, platform) -> None:
+        subprocess.Popen([self.GetExecutablePath(platform)], creationflags=DETACHED_PROCESS)
 
     def UninstallGame(self) -> None:
         subprocess.Popen([self.GetWgcapiPath(), '--uninstall'], creationflags=DETACHED_PROCESS, cwd = self.GetGameFolder())
