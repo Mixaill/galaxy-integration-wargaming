@@ -159,7 +159,7 @@ class WargamingPlugin(Plugin):
 
     def tick(self):
         if not self.__task_check_for_instances or self.__task_check_for_instances.done():
-            self.__task_check_for_game_instances = self.create_task(self.task_check_for_instances(), "task_check_for_instances")
+            self.__task_check_for_instances = self.create_task(self.task_check_for_instances(), "task_check_for_instances")
 
 
     async def task_check_for_instances(self):
