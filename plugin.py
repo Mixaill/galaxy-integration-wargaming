@@ -138,25 +138,6 @@ class WargamingPlugin(Plugin):
         self._wgc.launch_client(True)
 
 
-    async def get_friends(self):
-        friends = list()
-        xmpp_client = self.__xmpp_get_client('WOT')
-
-        while len(xmpp_client.client_roster) == 0:
-            try:
-                await asyncio.sleep(1)
-            except asyncio.CancelledError:
-                break
-
-        for jid in xmpp_client.client_roster:
-            userid = jid.split('@', 1)[0]
-            if userid != str(self._wgc.account_id()):
-                username = '%s_%s' % (self._wgc.account_realm(), xmpp_client.client_roster[jid]['name'])
-                friends.append(FriendInfo(userid, username))
-
-        return friends
-
-
     def tick(self):
         if not self.__task_check_for_instances or self.__task_check_for_instances.done():
             self.__task_check_for_instances = self.create_task(self.task_check_for_instances(), "task_check_for_instances")
@@ -224,6 +205,21 @@ class WargamingPlugin(Plugin):
                 logging.error('plugin/get_os_compatibility: unknown platform %s' % platform)
 
         return result
+
+
+    #
+    # ImportFriends
+    #
+
+    async def get_friends(self) -> List[FriendInfo]:
+        xmpp_client = self.__xmpp_get_client('WOT')
+
+        friends = list()
+        for friend_id, friend_name in (await xmpp_client.get_friends()).items():
+            friends.append(FriendInfo(friend_id, friend_name))
+
+        return friends
+
 
 def main():
     create_and_run_plugin(WargamingPlugin, sys.argv)

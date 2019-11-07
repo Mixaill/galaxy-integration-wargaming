@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from typing import Dict
 
 import slixmpp
 
@@ -27,7 +28,7 @@ class WgcXMPP(slixmpp.ClientXMPP):
 
     #Callbacks
     def on_session_start(self, event):
-        self.send_presence()
+        self.send_presence(pfrom=self.get_xmpp_jid(), ppriority=0)
         self.get_roster(callback=self.on_roster_received)
 
     def on_roster_received(self, event):
@@ -37,7 +38,7 @@ class WgcXMPP(slixmpp.ClientXMPP):
     #Info
 
     def get_xmpp_jid(self) -> str:
-        return '%s@%s' % (self._account_id, self.get_xmpp_domain())
+        return '%s@%s/%s' % (self._account_id, self.get_xmpp_domain(), self._game.lower())
 
     def get_xmpp_host(self) -> str:
         return XMPPRealms[self._game][self._realm]['host']
@@ -63,3 +64,21 @@ class WgcXMPP(slixmpp.ClientXMPP):
                 return True
         
         return False
+
+
+    async def get_friends(self) -> Dict[str,str]:
+        result = dict()
+
+        while len(self.client_roster) == 0:
+            try:
+                await asyncio.sleep(1)
+            except asyncio.CancelledError:
+                break
+
+        for jid in self.client_roster:
+            user_id = jid.split('@', 1)[0]
+            if user_id == str(self._account_id):
+                continue
+            result[user_id] =  '%s_%s' % (self._realm, self.client_roster[jid]['name'])
+
+        return result
