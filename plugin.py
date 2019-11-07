@@ -114,7 +114,7 @@ class WargamingPlugin(Plugin):
 
     async def launch_game(self, game_id):
         self.__local_applications[game_id].RunExecutable(self.__platform)
-        self.update_local_game_status(LocalGame(game_id, LocalGameState.Installed | LocalGameState.Running))
+        self.__change_game_status(game_id, LocalGameState.Installed | LocalGameState.Running)
 
 
     async def install_game(self, game_id):
@@ -171,25 +171,26 @@ class WargamingPlugin(Plugin):
         self.__local_applications = self._wgc.get_local_applications()
 
         #delete uninstalled games
-        for id in self.__local_games_states:
-            if id not in self.__local_applications:
-                self.__local_games_states.pop(id)
-                self.update_local_game_status(LocalGame(id, LocalGameState.None_))
+        for game_id in self.__local_games_states:
+            if game_id not in self.__local_applications:
+                self.__change_game_status(game_id, LocalGameState.None_)
 
         #change status of installed games
-        for id, game in self.__local_applications.items():
-            status_changed = False
+        for game_id, game in self.__local_applications.items():    
             new_state = LocalGameState.Installed | LocalGameState.Running if game.IsRunning() else LocalGameState.Installed
-
-            if id not in self.__local_games_states:
-                status_changed = True
-            elif new_state != self.__local_games_states[id]:
-                status_changed = True
-            self.__local_games_states[id] = new_state
+            
+            status_changed = True
+            if game_id in self.__local_games_states and new_state == self.__local_games_states[game_id]:
+                status_changed = False
 
             if notify and status_changed:
-                self.update_local_game_status(LocalGame(id, new_state))
+                self.__change_game_status(game_id, new_state)
 
+
+    def __change_game_status(self, game_id: str, new_state: LocalGameState) -> None:
+        logging.info('plugin/__change_game_status: game %s, new_state: %s' % (game_id, new_state))
+        self.__local_games_states[game_id] = new_state
+        self.update_local_game_status(LocalGame(game_id, new_state))
 
     #
     # XMPP
