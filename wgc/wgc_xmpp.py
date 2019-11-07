@@ -82,3 +82,19 @@ class WgcXMPP(slixmpp.ClientXMPP):
             result[user_id] =  '%s_%s' % (self._realm, self.client_roster[jid]['name'])
 
         return result
+
+
+    async def get_presence(self, user_id: str) -> str:
+        status = 'unknown'
+
+        while len(self.client_roster) == 0:
+            try:
+                await asyncio.sleep(1)
+            except asyncio.CancelledError:
+                break
+
+        for jid in self.client_roster:
+            if jid.split('@', 1)[0] == str(user_id):
+                status = 'online' if self._game.lower() in self.client_roster[jid].resources else 'offline'
+
+        return 'unknown'
