@@ -84,7 +84,7 @@ class WargamingPlugin(Plugin):
 
     async def authenticate(self, stored_credentials=None):
         if not stored_credentials:
-            logging.info('No stored credentials')
+            logging.info('plugin/authenticate: no stored credentials')
 
             AUTH_PARAMS = {
                 "window_title": "Login to Wargaming",
@@ -93,25 +93,25 @@ class WargamingPlugin(Plugin):
                 "start_uri": self._wgc.auth_server_uri(),
                 "end_uri_regex": '.*finished'
             }
-            if not self._wgc.auth_server_start():
+            if not await self._wgc.auth_server_start():
                 raise BackendError()
 
             return NextStep("web_session", AUTH_PARAMS)
 
         else:
-            auth_passed = self._wgc.login_info_set(stored_credentials)
+            auth_passed = await self._wgc.login_info_set(stored_credentials)
             if not auth_passed:
-                logging.warning('Stored credentials are invalid')
+                logging.warning('plugin/authenticate: stored credentials are invalid')
                 raise InvalidCredentials()
             
             return Authentication(self._wgc.account_id(), '%s_%s' % (self._wgc.account_realm(), self._wgc.account_nickname()))
 
     async def pass_login_credentials(self, step, credentials, cookies):
-        self._wgc.auth_server_stop()
+        await self._wgc.auth_server_stop()
 
         login_info = self._wgc.login_info_get()
         if not login_info:
-            logging.error('Login info is None!')
+            logging.error('plugin/authenticate: login info is None!')
             raise InvalidCredentials()
 
         self.store_credentials(login_info)
@@ -124,7 +124,7 @@ class WargamingPlugin(Plugin):
     async def get_owned_games(self) -> List[Game]:     
         owned_applications = list()
 
-        for instance in self._wgc.get_owned_applications(self._wgc.account_realm()).values():
+        for instance in (await self._wgc.get_owned_applications(self._wgc.account_realm())).values():
             license_info = LicenseInfo(LicenseType.SinglePurchase if instance.is_application_purchased() else LicenseType.FreeToPlay, None)
             owned_applications.append(Game(instance.get_application_id(), instance.get_application_fullname(), None, license_info))
 
@@ -186,7 +186,7 @@ class WargamingPlugin(Plugin):
     #
 
     async def get_friends(self) -> List[FriendInfo]:
-        xmpp_client = self.__xmpp_get_client('WOT')
+        xmpp_client = await self.__xmpp_get_client('WOT')
 
         friends = list()
         for friend_id, friend_name in (await xmpp_client.get_friends()).items():
@@ -221,7 +221,7 @@ class WargamingPlugin(Plugin):
     #
 
     async def get_user_presence(self, user_id: str, context: Any) -> UserPresence:
-        xmpp_client = self.__xmpp_get_client('WOT')
+        xmpp_client = await self.__xmpp_get_client('WOT')
         xmpp_state = await xmpp_client.get_presence(user_id)
 
         presence_state = PresenceState.Unknown
@@ -243,6 +243,9 @@ class WargamingPlugin(Plugin):
     def tick(self):
         if not self.__task_check_for_instances_obj or self.__task_check_for_instances_obj.done():
             self.__task_check_for_instances_obj = self.create_task(self.__task_check_for_instances(), "task_check_for_instances")
+
+    async def shutdown(self) -> None:
+        await self._wgc.shutdown()
 
     #
     # Internals
@@ -278,9 +281,9 @@ class WargamingPlugin(Plugin):
         self.update_local_game_status(LocalGame(game_id, new_state))
 
 
-    def __xmpp_get_client(self, client_type: str) -> WgcXMPP:
+    async def __xmpp_get_client(self, client_type: str) -> WgcXMPP:
         if client_type not in self._xmpp:
-            self._xmpp[client_type] = self._wgc.get_xmpp_client(client_type)
+            self._xmpp[client_type] = await self._wgc.get_xmpp_client(client_type)
             self._xmpp[client_type].connect()
 
         return self._xmpp[client_type]

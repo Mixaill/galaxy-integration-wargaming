@@ -1,7 +1,7 @@
 import json
 from typing import Dict, List
 
-import requests
+import aiohttp
 
 from .wgc_constants import PAPI_WOT_REALMS
 from .wgc_spa import sort_by_realms
@@ -11,7 +11,7 @@ class PAPIWoT(object):
     URL_WOT_ACCOUNT_INFO = 'wot/account/info/'
 
     @staticmethod
-    def get_account_info(account_ids : List[int]) -> Dict[str, Dict[int, object]]:
+    async def get_account_info(account_ids : List[int]) -> Dict[str, Dict[int, object]]:
 
         info = dict()
 
@@ -22,8 +22,8 @@ class PAPIWoT(object):
 
             url = 'https://%s/%s' % (PAPI_WOT_REALMS[realm_id]['host'], PAPIWoT.URL_WOT_ACCOUNT_INFO)
             
-            response = requests.get(url, params = params)
-            response_json = json.loads(response.text)
-            info[realm_id] = response_json['data']
+            async with aiohttp.ClientSession().get(url, params = params) as response:
+                response_json = json.loads(await response.text())
+                info[realm_id] = response_json['data']
 
         return info

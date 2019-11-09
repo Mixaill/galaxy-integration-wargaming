@@ -1,135 +1,110 @@
-DEBUG = False
-
-from http.server import HTTPServer, BaseHTTPRequestHandler
-import logging
+import asyncio
+from collections import namedtuple
 import json
+import logging
 import os
+import pprint
 import random
 import string
 import sys
-import pprint
 import threading
+from typing import Any, Dict, List
 from urllib.parse import parse_qs
-from typing import Dict, List
 
-import requests
+
+import aiohttp
+import aiohttp.web
 import sha3
 
 from .wgc_application_owned import WGCOwnedApplication
 from .wgc_constants import WGCAuthorizationResult, WGCRealms
 
+class WGCAuthorizationServer():
 
-class WGCAuthorizationServer(BaseHTTPRequestHandler):
-    backend = None
+    def __init__(self, backend):
+        self.__backend = backend
+        self.__app = aiohttp.web.Application()
 
-    def do_HEAD(self):
-        return
+        self.__runner = None
+        self.__site = None
 
-    def do_POST(self):
-        content_length = int(self.headers['Content-Length'])
-        post_data = self.rfile.read(content_length)
-        try:       
-            post_data = parse_qs(post_data)
-        except:
-            pass
+        self.__app.add_routes([
+            aiohttp.web.get ('/login'        , self.handle_login_get        ),
+            aiohttp.web.get ('/login_failed' , self.handle_login_failed_get ),
+            aiohttp.web.get ('/2fa'          , self.handle_2fa_get          ),
+            aiohttp.web.get ('/2fa_failed'   , self.handle_2fa_failed_get   ),
+            aiohttp.web.get ('/finished'     , self.handle_finished_get     ),
 
-        if self.path == '/login':
-            self.do_POST_login(post_data)
-        elif self.path == '/2fa':
-            self.do_POST_2fa(post_data)
-        else:
-            self.send_response(302)
-            self.send_header('Location','/404')
-            self.end_headers()
+            aiohttp.web.post('/login'   , self.handle_login_post  ),   
+            aiohttp.web.post('/2fa'     , self.handle_2fa_post    ),
+        ])
+    
+    async def start(self, host, port):
+        self.__runner = aiohttp.web.AppRunner(self.__app)
+        await self.__runner.setup()
+    
+        self.__site = aiohttp.web.TCPSite(self.__runner, host, port)
+        await self.__site.start()    
 
-    def do_POST_login(self, data):
+    async def shutdown(self):    
+        await self.__runner.cleanup()
 
+    async def handle_login_get(self, request):
+        return aiohttp.web.FileResponse(os.path.join(os.path.dirname(os.path.realpath(__file__)),'html\\login.html'))
+
+    async def handle_login_failed_get(self, request):
+        return aiohttp.web.FileResponse(os.path.join(os.path.dirname(os.path.realpath(__file__)),'html\\login_failed.html'))
+
+    async def handle_2fa_get(self, request):
+        return aiohttp.web.FileResponse(os.path.join(os.path.dirname(os.path.realpath(__file__)),'html\\2fa.html'))
+
+    async def handle_2fa_failed_get(self, request):
+        return aiohttp.web.FileResponse(os.path.join(os.path.dirname(os.path.realpath(__file__)),'html\\2fa_failed.html'))
+
+    async def handle_finished_get(self, request):
+        return aiohttp.web.FileResponse(os.path.join(os.path.dirname(os.path.realpath(__file__)),'html\\finished.html'))
+
+    async def handle_login_post(self, request):
+        data = await request.post()
+        auth_result = WGCAuthorizationResult.FAILED
+
+        #check data
         data_valid = True
-        if b'realm' not in data:
+        if 'realm' not in data:
             data_valid = False
-        if b'email' not in data:
+        if 'email' not in data:
             data_valid = False
-        if b'password' not in data:
+        if 'password' not in data:
             data_valid = False
-
-        auth_result = False
 
         if data_valid:
-            try:
-                auth_result = self.backend.do_auth_emailpass(
-                    data[b'realm'][0].decode("utf-8"),
-                    data[b'email'][0].decode("utf-8"),
-                    data[b'password'][0].decode("utf-8"))
-            except Exception:
-                logging.exception("error on doing auth:")
- 
-        self.send_response(302)
-        self.send_header('Content-type', "text/html")
-        if auth_result == WGCAuthorizationResult.FINISHED:
-            self.send_header('Location','/finished')
-        elif auth_result == WGCAuthorizationResult.REQUIRES_2FA:
-            self.send_header('Location','/2fa')
+            auth_result = await self.__backend.do_auth_emailpass(data['realm'], data['email'], data['password'])
         else:
-            self.send_header('Location','/login_failed')
+            logging.warning('wgc_auth_server/handle_login_post: data is not valid')
 
-        self.end_headers()
+        self.__process_auth_result(auth_result)
 
 
-    def do_POST_2fa(self, data):
-        data_valid = True
+    async def handle_2fa_post(self, request):
+        data = await request.post()
 
-        if b'authcode' not in data:
-            data_valid = False
-        auth_result = False
+        auth_result = WGCAuthorizationResult.INCORRECT_2FA
+        if 'authcode' in data:
+            use_backup_code = True if 'use_backup' in data else False
+            auth_result = await self.__backend.do_auth_2fa(data['authcode'], use_backup_code)
 
-        use_backup_code = False
-        if b'use_backup' in data:
-            use_backup_code = True
+        self.__process_auth_result(auth_result)
 
-        if data_valid:
-            try:
-                auth_result = self.backend.do_auth_2fa(data[b'authcode'][0].decode("utf-8"), use_backup_code)
-            except Exception:
-                logging.exception("error on doing auth:")
- 
-        self.send_response(302)
 
-        self.send_header('Content-type', "text/html")
+    def __process_auth_result(self, auth_result):
         if auth_result == WGCAuthorizationResult.FINISHED:
-            self.send_header('Location','/finished')
+            raise aiohttp.web.HTTPFound('/finished')
         elif auth_result == WGCAuthorizationResult.REQUIRES_2FA:
-            self.send_header('Location','/2fa')
+            raise aiohttp.web.HTTPFound('/2fa')
         elif auth_result == WGCAuthorizationResult.INCORRECT_2FA or auth_result == WGCAuthorizationResult.INCORRECT_2FA_BACKUP: 
-            self.send_header('Location','/2fa_failed')
+            raise aiohttp.web.HTTPFound('/2fa_failed')
         else:
-            self.send_header('Location','/login_failed')
-
-        self.end_headers()
-
-
-    def do_GET(self):
-        status = 200
-        content_type = "text/html"
-        response_content = ""
-
-        try:
-            filepath = os.path.join(os.path.dirname(os.path.realpath(__file__)),'html\\%s.html' % self.path)
-            if os.path.isfile(filepath):
-                response_content = open(filepath).read()
-            else:
-                filepath = os.path.join(os.path.dirname(os.path.realpath(__file__)),'html\\404.html')
-                if os.path.isfile(filepath):
-                    response_content = open(filepath).read()
-                else:
-                    response_content = 'ERROR: FILE NOT FOUND'
-
-            self.send_response(status)
-            self.send_header('Content-type', content_type)
-            self.end_headers()
-            self.wfile.write(bytes(response_content, "UTF-8"))
-        except Exception:
-            logging.exception('WGCAuthorizationServer/do_GET: error on %s' % self.path)
-
+            raise aiohttp.web.HTTPFound('/login_failed')
 
 class WGCApi:
     HTTP_USER_AGENT = 'wgc/19.03.00.5220'
@@ -157,65 +132,97 @@ class WGCApi:
         self._country_code = country_code
         self._language_code = language_code
 
-        self._server_thread = None
-        self._server_object = None
+        self.__server = None
 
-        self._login_info = None
-        self._login_info_temp = None
+        self.__login_info = None
+        self.__login_info_temp = None
 
-        self._session = requests.Session()
-        self._session.headers.update({'User-Agent': self.HTTP_USER_AGENT})
-        if DEBUG:
-            self._session.verify = False
+        self.__session_headers = {'User-Agent': self.HTTP_USER_AGENT}
+        self.__session = aiohttp.ClientSession(headers = {'User-Agent': self.HTTP_USER_AGENT})
+
+    async def shutdown(self):
+        if self.__server is not None:
+            await self.auth_server_stop()
+        
+        await self.__session.close()
+
+    #
+    # Requests
+    #
+
+    async def request(self, method: str, url: str, *, params: Any = None, data: Any = None, json: Any = None):
+        response_status = 202
+        response_text = None
+
+        if 'Referer' in self.__session_headers:
+            self.__session_headers.pop('Referer')
+    
+        while True:
+            async with self.__session.request(method, url, headers = self.__session_headers, params = params, data = data, json = json) as response:
+                response_text = await response.text()
+                response_status = response.status
+                if response_status == 202 and 'Location' in response.headers:
+                    url = response.headers['Location']
+                    self.__session_headers.update({'Referer': str(response.url)})
+                    method = 'GET'
+                else:
+                    break
+
+        return namedtuple('WgcResponse', ['status', 'text'])(response_status, response_text)
+
+    async def request_get(self, url: str) -> Any:
+        return await self.request('GET', url)
+
+    async def request_post(self, url: str, *, params: Any = None, data: Any = None, json: Any = None) -> Any:
+        return await self.request('POST', url, params = params, data = data, json = json)
 
     # 
     # Getters
     #
 
     def get_account_id(self) -> int:
-        if self._login_info is None:
+        if self.__login_info is None:
             logging.error('login info is none')
             return None
 
-        if 'user' not in self._login_info:
+        if 'user' not in self.__login_info:
             logging.error('login info does not contains user id')
             return None
 
-        return int(self._login_info['user'])
+        return int(self.__login_info['user'])
 
     def get_account_email(self) -> str:
-        if self._login_info is None:
+        if self.__login_info is None:
             logging.error('login info is none')
             return None
 
-        if 'email' not in self._login_info:
+        if 'email' not in self.__login_info:
             logging.error('login info does not contains email')
             return None
 
-        return self._login_info['email']
+        return self.__login_info['email']
 
     def get_account_nickname(self) -> str:
-        if self._login_info is None:
+        if self.__login_info is None:
             logging.error('login info is none')
             return None
 
-        if 'nickname' not in self._login_info:
+        if 'nickname' not in self.__login_info:
             logging.error('login info does not contains nickname')
             return None
 
-        return self._login_info['nickname']
-
+        return self.__login_info['nickname']
         
     def get_account_realm(self) -> str:
-        if self._login_info is None:
+        if self.__login_info is None:
             logging.error('login info is none')
             return None
 
-        if 'realm' not in self._login_info:
+        if 'realm' not in self.__login_info:
             logging.error('login info does not contains realm')
             return None
 
-        return self._login_info['realm']
+        return self.__login_info['realm']
 
     #
     # Authorization server
@@ -224,36 +231,24 @@ class WGCApi:
     def auth_server_uri(self) -> str:
         return 'http://%s:%s/login' % (self.LOCALSERVER_HOST, self.LOCALSERVER_PORT)
 
-    def auth_server_start(self) -> bool:
+    async def auth_server_start(self) -> bool:
 
-        if self._server_thread is not None:
-            logging.warning('Auth server thread is already running')
+        if self.__server is not None:
+            logging.warning('wgc_api/auth_server_start: auth server object is already exists')
             return False
 
-        if self._server_object is not None:
-            logging.warning('Auth server object is exists')
-            return False
+        self.__server = WGCAuthorizationServer(self)
+        self.__server_task = asyncio.create_task(self.__server.start(self.LOCALSERVER_HOST, self.LOCALSERVER_PORT))
 
-        WGCAuthorizationServer.backend = self
-        self._server_object = HTTPServer((self.LOCALSERVER_HOST, self.LOCALSERVER_PORT), WGCAuthorizationServer)
-        self._server_thread = threading.Thread(target = self._server_object.serve_forever)
-        self._server_thread.daemon = True
-        self._server_thread.start()
         return True
 
-    def auth_server_stop(self) -> bool:
-        if self._server_object is not None:
-            self._server_object.shutdown()
-            self._server_object = None
+    async def auth_server_stop(self) -> bool:
+        if self.__server is not None:
+            await self.__server.shutdown()
+            self.__server = None
+            return True
         else:
-            logging.warning('Auth server object is not exits')
-            return False
-
-        if self._server_thread is not None:
-            self._server_thread.join()
-            self._server_thread = None
-        else:
-            logging.warning('Auth server thread is not running')
+            logging.warning('wgc_ap/auth_server_stop: auth server object is not exits')
             return False
 
     #
@@ -261,9 +256,9 @@ class WGCApi:
     #
 
     def login_info_get(self) -> Dict[str,str]:
-        return self._login_info
+        return self.__login_info
 
-    def login_info_set(self, login_info: Dict[str,str]) -> bool:
+    async def login_info_set(self, login_info: Dict[str,str]) -> bool:
 
         if login_info is None:
             logging.error('wgc_auth/login_info_set: login info is none')
@@ -289,10 +284,10 @@ class WGCApi:
             logging.error('wgc_auth/login_info_set: user is missing')
             return False
 
-        self._login_info = login_info
+        self.__login_info = login_info
         self.__update_bearer()
 
-        wgni_account_info = self.__wgni_get_account_info()
+        wgni_account_info = await self.__wgni_get_account_info()
 
         if wgni_account_info is None:
             logging.error('wgc_auth/login_info_set: failed to get account info')
@@ -308,15 +303,14 @@ class WGCApi:
     # Authorization routine
     # 
 
-    def do_auth_emailpass(self, realm, email, password) -> WGCAuthorizationResult:
+    async def do_auth_emailpass(self, realm, email, password) -> WGCAuthorizationResult:
         '''
         Perform authorization using email and password
         '''
 
-        self._session.cookies.clear()
-        self._login_info_temp = {'realm': realm, 'email': email, 'password': password}
+        self.__login_info_temp = {'realm': realm, 'email': email, 'password': password}
 
-        challenge_data = self.__oauth_challenge_get(realm)
+        challenge_data = await self.__oauth_challenge_get(realm)
         if not challenge_data:
             logging.error('Failed to get challenge')
             return WGCAuthorizationResult.FAILED
@@ -326,16 +320,16 @@ class WGCApi:
         if not pow_number:
             logging.error('wgc_auth/do_auth_emailpass: failed to calculate challenge')
             return WGCAuthorizationResult.FAILED
-        self._login_info_temp['pow_number'] = pow_number
+        self.__login_info_temp['pow_number'] = pow_number
 
         #try to get token
-        token_data_bypassword = self.__oauth_token_get_bypassword(realm, email, password, pow_number)
+        token_data_bypassword = await self.__oauth_token_get_bypassword(realm, email, password, pow_number)
 
         #process error
         if token_data_bypassword['status_code'] != 200:
             if 'error_description' in token_data_bypassword:
                 if token_data_bypassword['error_description'] == 'twofactor_required':
-                    self._login_info_temp['twofactor_token'] = token_data_bypassword['twofactor_token']
+                    self.__login_info_temp['twofactor_token'] = token_data_bypassword['twofactor_token']
                     return WGCAuthorizationResult.REQUIRES_2FA
                 elif token_data_bypassword['error_description'] == 'Invalid password parameter value.':
                     return WGCAuthorizationResult.INVALID_LOGINPASS
@@ -347,38 +341,37 @@ class WGCApi:
 
         return self.do_auth_token(realm, email, token_data_bypassword)
 
-
-    def do_auth_2fa(self, otp_code: str, use_backup_code: bool) -> WGCAuthorizationResult:
+    async def do_auth_2fa(self, otp_code: str, use_backup_code: bool) -> WGCAuthorizationResult:
         '''
         Submits 2FA answer and continue authorization
         '''
 
-        if 'realm' not in self._login_info_temp:
+        if 'realm' not in self.__login_info_temp:
             logging.error('wgc_auth/do_auth_2fa: realm not in stored data')
             return WGCAuthorizationResult.FAILED
 
-        if 'email' not in self._login_info_temp:
+        if 'email' not in self.__login_info_temp:
             logging.error('wgc_auth/do_auth_2fa: email not in stored data')
             return WGCAuthorizationResult.FAILED
 
-        if 'password' not in self._login_info_temp:
+        if 'password' not in self.__login_info_temp:
             logging.error('wgc_auth/do_auth_2fa: password not in stored data')
             return WGCAuthorizationResult.FAILED
 
-        if 'pow_number' not in self._login_info_temp:
+        if 'pow_number' not in self.__login_info_temp:
             logging.error('wgc_auth/do_auth_2fa: pow number not in stored data')
             return WGCAuthorizationResult.FAILED
 
-        if 'twofactor_token' not in self._login_info_temp:
+        if 'twofactor_token' not in self.__login_info_temp:
             logging.error('wgc_auth/do_auth_2fa: twofactor token not in stored data')
             return WGCAuthorizationResult.FAILED
 
-        token_data_byotp = self.__oauth_token_get_bypassword(
-            self._login_info_temp['realm'],
-            self._login_info_temp['email'],
-            self._login_info_temp['password'],
-            self._login_info_temp['pow_number'],
-            self._login_info_temp['twofactor_token'],
+        token_data_byotp = await self.__oauth_token_get_bypassword(
+            self.__login_info_temp['realm'],
+            self.__login_info_temp['email'],
+            self.__login_info_temp['password'],
+            self.__login_info_temp['pow_number'],
+            self.__login_info_temp['twofactor_token'],
             otp_code,
             use_backup_code)
 
@@ -394,15 +387,14 @@ class WGCApi:
             logging.error('wgc_auth/do_auth_2fa: failed to request token by email, password and OTP: %s' % token_data_byotp)
             return WGCAuthorizationResult.FAILED
 
-        return self.do_auth_token(self._login_info_temp['realm'], self._login_info_temp['email'], token_data_byotp)
+        return await self.do_auth_token(self.__login_info_temp['realm'], self.__login_info_temp['email'], token_data_byotp)
 
-
-    def do_auth_token(self, realm, email, token_data_input) -> WGCAuthorizationResult:
+    async def do_auth_token(self, realm, email, token_data_input) -> WGCAuthorizationResult:
         '''
         Second step of authorization in case if you already logged in via emailpass or 2FA
         '''
 
-        token_data_bytoken = self.__oauth_token_get_bytoken(realm, token_data_input)
+        token_data_bytoken = await self.__oauth_token_get_bytoken(realm, token_data_input)
         if not token_data_bytoken:
             logging.error('wgc_auth/do_auth_token: failed to request token by token')
             return WGCAuthorizationResult.FAILED
@@ -414,33 +406,32 @@ class WGCApi:
         login_info['user'] = token_data_bytoken['user']
         login_info['access_token'] = token_data_bytoken['access_token']
         login_info['exchange_code'] = token_data_bytoken['exchange_code']
-        self._login_info = login_info
+        self.__login_info = login_info
 
         #update bearer
         self.__update_bearer()
 
         #get additinal info from WGNI
-        wgni_account_info = self.__wgni_get_account_info()
+        wgni_account_info = await self.__wgni_get_account_info()
         logging.info(wgni_account_info)
-        self._login_info['nickname'] = wgni_account_info['nickname']
+        self.__login_info['nickname'] = wgni_account_info['nickname']
 
         return WGCAuthorizationResult.FINISHED
 
-
     def __update_bearer(self):
-        if self._login_info is None:
+        if self.__login_info is None:
             logging.error('wgc_auth/update_bearer: login info is none')
             return None
 
-        if 'access_token' not in self._login_info:
+        if 'access_token' not in self.__login_info:
             logging.error('wgc_auth/update_bearer: login info does not contain access token')
             return None
 
-        if 'exchange_code' not in self._login_info:
+        if 'exchange_code' not in self.__login_info:
             logging.error('wgc_auth/update_bearer: login info does not contain exchange code')
             return None
 
-        self._session.headers.update({'Authorization':'Bearer %s:%s' % (self._login_info['access_token'], self._login_info['exchange_code'])})
+        self.__session_headers.update({'Authorization':'Bearer %s:%s' % (self.__login_info['access_token'], self.__login_info['exchange_code'])})
 
     #
     # URL formatting
@@ -468,9 +459,9 @@ class WGCApi:
             logging.exception('wgc_api/__get_oauth_clientid: failed to get client Id for realm %s' % realm)
             return None
 
-    def __oauth_challenge_get(self, realm):
-        r = self._session.get(self.__get_url('wgnet', realm, self.OUATH_URL_CHALLENGE))
-        if r.status_code != 200:
+    async def __oauth_challenge_get(self, realm):
+        r = await self.request_get(self.__get_url('wgnet', realm, self.OUATH_URL_CHALLENGE))
+        if r.status != 200:
             logging.error('wgc_auth/oauth_challenge_get: error %s, content: %s' % (r.status_code, r.text))
             return None
 
@@ -501,7 +492,7 @@ class WGCApi:
 
             pow_number = pow_number + 1
 
-    def __oauth_token_get_bypassword(self, realm, email, password, pow_number, twofactor_token : str = None, otp_code : str = None, use_backup_code : bool = False):
+    async def __oauth_token_get_bypassword(self, realm, email, password, pow_number, twofactor_token : str = None, otp_code : str = None, use_backup_code : bool = False):
         body = dict()
         body['username'] = email
         body['password'] = password
@@ -517,21 +508,19 @@ class WGCApi:
             else:
                 body['otp_code'] = otp_code
 
-        response = self._session.post(self.__get_url('wgnet', realm, self.OAUTH_URL_TOKEN), data = body)
-        while response.status_code == 202:
-            response = self._session.get(response.headers['Location'])
+        response = await self.request_post(self.__get_url('wgnet', realm, self.OAUTH_URL_TOKEN), data = body)
         
-        text = None
+        result = None
         try:
-            text = json.loads(response.text)
+            result = json.loads(response.text)
         except Exception:
-            logging.exception('wgc_api/__oauth_token_get_bypassword: failed to parse response')
-            return None
+            logging.exception('wgc_api/__oauth_token_get_bypassword: failed to parse response %s' % response.text)
+            return result
 
-        text['status_code'] = response.status_code
-        return text
+        result['status_code'] = response.status
+        return result
 
-    def __oauth_token_get_bytoken(self, realm, token_data):
+    async def __oauth_token_get_bytoken(self, realm, token_data):
         body = dict()
         body['access_token'] = token_data['access_token']
         body['grant_type'] = self.OAUTH_GRANT_TYPE_BYTOKEN
@@ -539,13 +528,10 @@ class WGCApi:
         body['exchange_code'] = ''.join(random.choices(string.digits+'ABCDEF', k=32))
         body['tid'] = self._tracking_id
 
-        response = self._session.post(self.__get_url('wgnet', realm, self.OAUTH_URL_TOKEN), data = body)
+        response = await self.request_post(self.__get_url('wgnet', realm, self.OAUTH_URL_TOKEN), data = body)
 
-        while response.status_code == 202:
-            response = self._session.get(response.headers['Location'])
-
-        if response.status_code != 200:
-            logging.error('wgc_auth/__oauth_token_get_bytoken: error on receiving token by token: %s' % response.text)
+        if response.status != 200:
+            logging.error('wgc_auth/__oauth_token_get_bytoken: error on receiving token by token: %s because status is %s' % (response.text, response.status))
             return None
 
         result = json.loads(response.text)
@@ -557,8 +543,8 @@ class WGCApi:
     # Token1
     #
 
-    def create_token1(self, requested_for : str) -> str:
-        resp = self.__wgni_create_token_1(requested_for)
+    async def create_token1(self, requested_for : str) -> str:
+        resp = await self.__wgni_create_token_1(requested_for)
 
         if resp is None:
             logging.error('wgc_api/create_token1: failed to create token1 for %s' % requested_for)
@@ -570,54 +556,47 @@ class WGCApi:
 
         return resp['token']
 
-    def __wgni_create_token_1(self, requested_for : str):
-        if self._login_info is None:
+    async def __wgni_create_token_1(self, requested_for : str):
+        if self.__login_info is None:
             logging.error('wgc_api/__wgni_create_token_1: login info is none')
             return None
 
-        if 'realm' not in self._login_info:
+        if 'realm' not in self.__login_info:
             logging.error('wgc_api/__wgni_create_token_1: login info does not contain realm')
             return None
 
-        if 'access_token' not in self._login_info:
+        if 'access_token' not in self.__login_info:
             logging.error('wgc_api/__wgni_create_token_1: login info does not contain access_token')
             return None
 
-        response = self._session.post(
-            self.__get_url('wgnet', self._login_info['realm'], self.WGNI_URL_TOKEN1), 
-            data = { 'requested_for' : requested_for, 'access_token' : self._login_info['access_token'] })
-        
-        while response.status_code == 202:
-            response = self._session.get(response.headers['Location'])
+        response = await self.request_post(
+            self.__get_url('wgnet', self.__login_info['realm'], self.WGNI_URL_TOKEN1), 
+            data = { 'requested_for' : requested_for, 'access_token' : self.__login_info['access_token'] })
 
-        if response.status_code != 200:
+        if response.status != 200:
             logging.error('wgc_api/__wgni_create_token_1: error on creating token1: %s' % response.text)
             return None
 
         return json.loads(response.text)
 
-
     #
     # Account info
     #
 
-    def __wgni_get_account_info(self):
-        if self._login_info is None:
+    async def __wgni_get_account_info(self):
+        if self.__login_info is None:
             logging.error('wgc_auth/wgni_get_account_info: login info is none')
             return None
 
-        if 'realm' not in self._login_info:
+        if 'realm' not in self.__login_info:
             logging.error('wgc_auth/wgni_get_account_info: login info does not contain realm')
             return None
 
-        response = self._session.post(
-            self.__get_url('wgnet', self._login_info['realm'], self.WGNI_URL_ACCOUNTINFO), 
+        response = await self.request_post(
+            self.__get_url('wgnet', self.__login_info['realm'], self.WGNI_URL_ACCOUNTINFO), 
             data = { 'fields' : 'nickname' })
-      
-        while response.status_code == 202:
-            response = self._session.get(response.headers['Location'])
         
-        if response.status_code != 200:
+        if response.status != 200:
             logging.error('wgc_auth/wgni_get_account_info: error on retrieving account info: %s' % response.text)
             return None
 
@@ -627,19 +606,19 @@ class WGCApi:
     # Fetch product list
     #
 
-    def fetch_product_list(self) -> List[WGCOwnedApplication]:
+    async def fetch_product_list(self) -> List[WGCOwnedApplication]:
         product_list = list()
 
         additional_gameurls = list()
         purchased_gameids = list()
-        wgcps_product_list = self.__wgcps_fetch_product_list()
+        wgcps_product_list = await self.__wgcps_fetch_product_list()
         if wgcps_product_list is not None:
             for game_data in wgcps_product_list['data']['product_content']:
                 wgc_data = game_data['metadata']['wgc']
                 additional_gameurls.append('%s@%s' % (wgc_data['application_id']['data'], wgc_data['update_url']['data']))
                 purchased_gameids.append(wgc_data['application_id']['data'].split('.')[0])
 
-        showroom_data = self.__wguscs_get_showroom(additional_gameurls)
+        showroom_data = await self.__wguscs_get_showroom(additional_gameurls)
         if showroom_data is None:
             logging.error('wgc_api/fetch_product_list: error on retrieving showroom data')
             return product_list
@@ -664,22 +643,19 @@ class WGCApi:
         return product_list
 
 
-    def __wgcps_fetch_product_list(self):
-        if self._login_info is None:
+    async def __wgcps_fetch_product_list(self):
+        if self.__login_info is None:
             logging.error('wgc_auth/__wgcps_fetch_product_list: login info is none')
             return None
 
-        if 'realm' not in self._login_info:
+        if 'realm' not in self.__login_info:
             logging.error('wgc_auth/__wgcps_fetch_product_list: login info does not contain realm')
             return None
 
-        response = self._session.post(
-            self.__get_url('wgcps', self._login_info['realm'], self.WGCPS_FETCH_PRODUCT_INFO), 
+        response = await self.request_post(
+            self.__get_url('wgcps', self.__login_info['realm'], self.WGCPS_FETCH_PRODUCT_INFO), 
             json = { 'account_id' : self.get_account_id(), 'country' : self._country_code, 'storefront' : 'wgc_showcase' })
-      
-        while response.status_code == 202:
-            response = self._session.get(response.headers['Location'])
-        
+
         response_content = None
         try:
             response_content = json.loads(response.text)
@@ -687,7 +663,7 @@ class WGCApi:
             logging.exception('wgc_auth/__wgcps_fetch_product_list: failed for parse json: %s' % response.text)
             return None
 
-        if response.status_code != 200:
+        if response.status != 200:
             #{"status": "error", "errors": [{"code": "platform_error", "context": {"result_code": "EXCEPTION"}}, {"code": "retry", "context": {"interval": 30}}]}
             if 'errors' in response_content and response_content['errors'][0]['code'] == 'platform_error':
                 logging.warning('wgc_auth/__wgcps_fetch_product_list: platform error: %s' % response.text)
@@ -698,8 +674,8 @@ class WGCApi:
         #load additional adata
         response_content['data']['product_content'] = list()
         for product_uri in response_content['data']['product_uris']:
-            product_response = self._session.get(product_uri)
-            if response.status_code != 200:
+            product_response = await self.request_get(product_uri)
+            if response.status != 200:
                 logging.error('wgc_auth/__wgcps_fetch_product_list: error on retrieving product info: %s' % product_uri)
                 continue
 
@@ -707,13 +683,12 @@ class WGCApi:
 
         return response_content
 
-
-    def __wguscs_get_showroom(self, additional_urls : List[str] = None):
-        if self._login_info is None:
+    async def __wguscs_get_showroom(self, additional_urls : List[str] = None):
+        if self.__login_info is None:
             logging.error('wgc_auth/__wguscs_get_showroom: login info is none')
             return None
 
-        if 'realm' not in self._login_info:
+        if 'realm' not in self.__login_info:
             logging.error('wgc_auth/__wguscs_get_showroom: login info does not contain realm')
             return None
 
@@ -721,15 +696,15 @@ class WGCApi:
         if additional_urls:     
             additionals = '&showcase_products=' + str.join('&showcase_products=', additional_urls)
 
-        url = self.__get_url('wguscs', self._login_info['realm'], self.WGUSCS_SHOWROOM)
+        url = self.__get_url('wguscs', self.__login_info['realm'], self.WGUSCS_SHOWROOM)
         url = url + '?lang=%s' % self._language_code.upper()
         url = url + '&gameid=WGC.RU.PRODUCTION&format=json'
         url = url + '&country_code=%s' % self._country_code
         url = url + additionals
 
-        showroom_response = self._session.get(url)
+        showroom_response = await self.request_get(url)
         
-        if showroom_response.status_code != 200:
+        if showroom_response.status != 200:
             logging.error('wgc_auth/__wguscs_get_showroom: error on retrieving showroom data: %s' % showroom_response.text)
             return None
 

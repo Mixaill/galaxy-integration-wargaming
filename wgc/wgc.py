@@ -17,16 +17,18 @@ class WGC():
         self._api = WGCApi(self.get_tracking_id(), self.get_country_code(), self.get_wgc_language())
         pass
 
+    async def shutdown(self):
+        await self._api.shutdown()
 
     #Auth Server
     def auth_server_uri(self) -> str:
         return self._api.auth_server_uri()
 
-    def auth_server_start(self) -> bool:
-        return self._api.auth_server_start()
+    async def auth_server_start(self) -> bool:
+        return await self._api.auth_server_start()
 
-    def auth_server_stop(self) -> bool:
-        return self._api.auth_server_stop()
+    async def auth_server_stop(self) -> bool:
+        return await self._api.auth_server_stop()
 
 
     #Login info
@@ -104,9 +106,9 @@ class WGC():
 
         return apps
 
-    def get_owned_applications(self, target_realm: str = None) -> Dict[str, WGCOwnedApplicationInstance]:
+    async def get_owned_applications(self, target_realm: str = None) -> Dict[str, WGCOwnedApplicationInstance]:
         applications_instances = dict()
-        for application in self._api.fetch_product_list():
+        for application in await self._api.fetch_product_list():
             for key, application_instance in application.get_application_instances().items():
 
                 #skip if realm is not match our target
@@ -135,7 +137,7 @@ class WGC():
 
     # XMPP
     
-    def get_xmpp_client(self, game) -> WgcXMPP :
+    async def get_xmpp_client(self, game) -> WgcXMPP :
 
         realm = self._api.get_account_realm()
         if realm is None:
@@ -147,7 +149,7 @@ class WGC():
             logging.error('wgc/get_xmpp_wot: failed to get account_id')
             return None
 
-        token1 = self._api.create_token1('xmppcs')
+        token1 = await self._api.create_token1('xmppcs')
         if token1 is None:
             logging.error('wgc/get_xmpp_wot: failed to get token1')
 
