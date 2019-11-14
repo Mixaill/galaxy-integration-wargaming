@@ -312,7 +312,7 @@ class WGCApi:
 
         challenge_data = await self.__oauth_challenge_get(realm)
         if not challenge_data:
-            logging.error('Failed to get challenge')
+            logging.error('do_auth_emailpass/ failed to get challenge')
             return WGCAuthorizationResult.FAILED
 
         #calculate proof of work
@@ -332,6 +332,8 @@ class WGCApi:
                     self.__login_info_temp['twofactor_token'] = token_data_bypassword['twofactor_token']
                     return WGCAuthorizationResult.REQUIRES_2FA
                 elif token_data_bypassword['error_description'] == 'Invalid password parameter value.':
+                    return WGCAuthorizationResult.INVALID_LOGINPASS
+                elif token_data_bypassword['error_description'] == 'Request is missing password parameter.':
                     return WGCAuthorizationResult.INVALID_LOGINPASS
                 elif token_data_bypassword['error_description'] == 'account_not_found':
                     return WGCAuthorizationResult.ACCOUNT_NOT_FOUND
@@ -462,7 +464,7 @@ class WGCApi:
     async def __oauth_challenge_get(self, realm):
         r = await self.request_get(self.__get_url('wgnet', realm, self.OUATH_URL_CHALLENGE))
         if r.status != 200:
-            logging.error('wgc_auth/oauth_challenge_get: error %s, content: %s' % (r.status_code, r.text))
+            logging.error('wgc_auth/oauth_challenge_get: error %s, content: %s' % (r.status, r.text))
             return None
 
         return json.loads(r.text)['pow']
