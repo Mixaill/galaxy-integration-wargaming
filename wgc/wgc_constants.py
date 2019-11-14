@@ -11,10 +11,10 @@ class WGCAuthorizationResult(Enum):
     INCORRECT_2FA_BACKUP = 7
 
 WGCInstallDocs = {
-    'RU'   : 'https://ru.wargaming.net/support/ru/products/wgc/article/23738/',
-    'EU'   : 'https://eu.wargaming.net/support/en/products/wgc/article/10301',
-    'NA'   : 'https://worldoftanks.com/en/news/announcements/wgc-final-migration/',
-    'ASIA' : 'https://asia.wargaming.net/support/en/products/wgc/article/21842/',
+    'RU'   : 'https://worldoftanks.ru/ru/wgc/',
+    'EU'   : 'https://worldoftanks.eu/en/wgc/',
+    'NA'   : 'https://worldoftanks.com/en/wgc/',
+    'ASIA' : 'https://worldoftanks.asia/en/wgc/',
 }
 
 WGCRealms = { 
