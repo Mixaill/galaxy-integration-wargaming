@@ -4,6 +4,7 @@ import subprocess
 import xml.etree.ElementTree as ElementTree
 from typing import Dict, List
 
+from .wgc_constants import WGC_MUTEXES
 from .wgc_helper import DETACHED_PROCESS, is_mutex_exists, fixup_gamename
 
 class WGCLocalApplication():
@@ -64,20 +65,29 @@ class WGCLocalApplication():
         return fixup_gamename(result.text)
 
 
-    def GetMutexName(self) -> str:
+    def GetMutexNames(self) -> List[str]:
+        result = list()
+
         # metadata v5
-        result = self.__metadata.find('mutex_name')
+        mtx_config = self.__metadata.find('mutex_name')
         
         #metadata v6
-        if result is None:
-            result = self.__metadata.find('predefined_section/mutex_name')
+        if mtx_config is None:
+            mtx_config = self.__metadata.find('predefined_section/mutex_name')
+
+        if mtx_config is not None:
+            result.append(mtx_config.text)
+
+        #wgc_game_mtx constant
+        game_id = self.GetId().split('.')[0]
+        if game_id in WGC_MUTEXES:
+            result.append(WGC_MUTEXES[game_id])
 
         #unknown version
-        if result is None:
-            logging.error('WGCLocalApplication/GetMutexName: None object')
-            return None
+        if not result:
+            logging.error('WGCLocalApplication/GetMutexName: no mutexes found for application %s' % self.GetId())
 
-        return result.text
+        return result
 
 
     def GetExecutableNames(self) -> Dict[str,str]:
@@ -120,7 +130,10 @@ class WGCLocalApplication():
         return self.__folder
 
     def IsRunning(self) -> bool:
-        return is_mutex_exists(self.GetMutexName())
+        for mutex_name in self.GetMutexNames():
+            if is_mutex_exists(mutex_name):
+                return True
+        return False
 
     def GetExecutablePath(self, platform) -> str:
         return os.path.join(self.GetGameFolder(), self.GetExecutableNames()[platform])
