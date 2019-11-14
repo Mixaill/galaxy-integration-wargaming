@@ -232,7 +232,7 @@ class WargamingPlugin(Plugin):
         elif xmpp_state == 'unknown':
             presence_state = PresenceState.Unknown
         else:
-            logging.eror('plugin/get_user_presence: unknown presence state %s' % xmpp_state)
+            logging.error('plugin/get_user_presence: unknown presence state %s' % xmpp_state)
 
         return UserPresence(presence_state, None, None, None)
 
@@ -276,7 +276,6 @@ class WargamingPlugin(Plugin):
 
 
     def __change_game_status(self, game_id: str, new_state: LocalGameState) -> None:
-        logging.info('plugin/__change_game_status: game %s, new_state: %s' % (game_id, new_state))
         self.__local_games_states[game_id] = new_state
         self.update_local_game_status(LocalGame(game_id, new_state))
 
