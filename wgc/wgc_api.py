@@ -341,7 +341,7 @@ class WGCApi:
             logging.error('wgc_auth/do_auth_emailpass: failed to request token by email and password: %s' % token_data_bypassword)
             return WGCAuthorizationResult.FAILED
 
-        return self.do_auth_token(realm, email, token_data_bypassword)
+        return await self.do_auth_token(realm, email, token_data_bypassword)
 
     async def do_auth_2fa(self, otp_code: str, use_backup_code: bool) -> WGCAuthorizationResult:
         '''
