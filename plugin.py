@@ -202,17 +202,18 @@ class WargamingPlugin(Plugin):
 
     async def get_os_compatibility(self, game_id: str, context: Any) -> Optional[OSCompatibility]:
         if game_id not in self.__local_applications:
-            logging.warning('plugin/get_os_compatibility: unknown game_id %s' % game_id)
-            return None
+            #TODO: find a way to get OS compat from owned application, not local
+            #logging.warning('plugin/get_os_compatibility: unknown game_id %s' % game_id)
+            return OSCompatibility.Windows
 
-        result = 0
+        result = None
         for platform in self.__local_applications[game_id].GetOsCompatibility():
             if platform == 'windows':
-                result |= OSCompatibility.Windows
+                result = OSCompatibility.Windows if result is None else result | OSCompatibility.Windows
             elif platform == 'macos':
-                result |= OSCompatibility.MacOS
+                result = OSCompatibility.MacOS if result is None else result | OSCompatibility.MacOS
             elif platform == 'linux':
-                result |= OSCompatibility.Linux
+                result = OSCompatibility.Linux if result is None else result | OSCompatibility.Linux
             else:
                 logging.error('plugin/get_os_compatibility: unknown platform %s' % platform)
 
