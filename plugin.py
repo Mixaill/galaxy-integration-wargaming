@@ -253,6 +253,9 @@ class WargamingPlugin(Plugin):
     async def shutdown(self) -> None:
         await self._wgc.shutdown()
 
+        for xmpp_client in self._xmpp.values():
+            xmpp_client.disconnect()
+
     #
     # Internals
     #
