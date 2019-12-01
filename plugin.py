@@ -29,7 +29,7 @@ sentry_sdk.init(
 from galaxy.api.consts import OSCompatibility, Platform, PresenceState
 from galaxy.api.errors import BackendError, InvalidCredentials
 from galaxy.api.plugin import Plugin, create_and_run_plugin
-from galaxy.api.types import Authentication, Game, LicenseInfo, LicenseType, LocalGame, LocalGameState, NextStep, FriendInfo, UserPresence
+from galaxy.api.types import Authentication, Game, LicenseInfo, LicenseType, LocalGame, LocalGameState, NextStep, UserInfo, UserPresence
 import webbrowser
 
 from wgc import WGC, PAPIWoT, WgcXMPP
@@ -185,12 +185,14 @@ class WargamingPlugin(Plugin):
     # ImportFriends
     #
 
-    async def get_friends(self) -> List[FriendInfo]:
+    async def get_friends(self) -> List[UserInfo]:
         xmpp_client = await self.__xmpp_get_client('WOT')
 
         friends = list()
-        for friend_id, friend_name in (await xmpp_client.get_friends()).items():
-            friends.append(FriendInfo(friend_id, friend_name))
+        for user_id, user_name in (await xmpp_client.get_friends()).items():
+            #TODO: avatar
+            #TODO: profile URL
+            friends.append(UserInfo(user_id, user_name, None, None))
 
         return friends
 
@@ -234,7 +236,11 @@ class WargamingPlugin(Plugin):
         else:
             logging.error('plugin/get_user_presence: unknown presence state %s' % xmpp_state)
 
-        return UserPresence(presence_state, None, None, None)
+        #TODO: game id
+        #TODO: game title
+        #TODO: in_game_status
+        #TODO: full status
+        return UserPresence(presence_state, None, None, None, None)
 
     #
     # Other
