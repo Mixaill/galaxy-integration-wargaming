@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 import os
+import pickle
 import platform
 import sys
 from typing import Any, List, Optional
@@ -29,11 +30,12 @@ sentry_sdk.init(
 from galaxy.api.consts import OSCompatibility, Platform, PresenceState
 from galaxy.api.errors import BackendError, InvalidCredentials
 from galaxy.api.plugin import Plugin, create_and_run_plugin
-from galaxy.api.types import Authentication, Game, LicenseInfo, LicenseType, LocalGame, LocalGameState, NextStep, UserInfo, UserPresence
+from galaxy.api.types import Authentication, Game, GameTime, LicenseInfo, LicenseType, LocalGame, LocalGameState, NextStep, UserInfo, UserPresence
 import galaxy.proc_tools as proc_tools
+
 import webbrowser
 
-from wgc import WGC, PAPIWoT, WgcXMPP
+from galaxyutils.time_tracker import TimeTracker, GameNotTrackedException, GamesStillBeingTrackedException
 
 from wgc import WGC, WGCLocalApplication, PAPIWoT, WgcXMPP
 
@@ -49,13 +51,13 @@ class WargamingPlugin(Plugin):
       * UninstallGame
       * LaunchPlatformClient
       * ImportFriends
+      * ImportGameTime
       * ImportOSCompatibility
       * ImportUserPresence
 
     Missing features:
       * ImportAchievements
       * ShutdownPlatformClient
-      * ImportGameTime
       * ImportGameLibrarySettings
 
     """
@@ -68,6 +70,13 @@ class WargamingPlugin(Plugin):
 
         self._wgc = WGC()
         self._xmpp = dict()
+
+        #intialized flag
+        self.__handshake_completed = False
+        self.__localgames_imported = False
+
+        #time tracker
+        self.__gametime_tracker = None
 
         self.__task_check_for_instances_obj = None
         self.__local_games_states = dict()
@@ -144,6 +153,7 @@ class WargamingPlugin(Plugin):
         for id, state in self.__local_games_states.items():
             result.append(LocalGame(id,state)) 
 
+        self.__localgames_imported = True
         return result
 
     #
@@ -152,7 +162,7 @@ class WargamingPlugin(Plugin):
 
     async def launch_game(self, game_id: str) -> None:
         self.__local_applications[game_id].RunExecutable(self.__platform)
-        self.__change_game_status(game_id, LocalGameState.Installed | LocalGameState.Running)
+        self.__change_game_status(game_id, LocalGameState.Installed | LocalGameState.Running, True)
 
     #
     # InstallGame
@@ -198,6 +208,24 @@ class WargamingPlugin(Plugin):
             friends.append(UserInfo(user_id, user_name, None, None))
 
         return friends
+
+    #
+    # ImportGameTime
+    #
+
+    async def get_game_time(self, game_id: str, context: Any) -> GameTime:
+        last_played = 0
+        time_played = 0
+
+        cache = self.__gametime_tracker._game_time_cache
+        if game_id in cache:
+            cache_record = cache[game_id]
+            if 'last_played' in cache_record:
+                last_played = cache_record['last_played']
+            if 'time_played' in cache_record:
+                time_played = cache_record['time_played'] 
+
+        return GameTime(game_id, time_played, last_played)
 
     #
     # ImportOSCompatibility
@@ -250,15 +278,27 @@ class WargamingPlugin(Plugin):
     # Other
     #
 
+    def handshake_complete(self) -> None:
+        #time tracker initialization
+        gametime_cache = self.__gametime_load_cache()
+        self.__gametime_tracker = TimeTracker(game_time_cache=gametime_cache) if gametime_cache is not None else TimeTracker()
+
+        self.__handshake_completed = True
+
     def tick(self):
-        if not self.__task_check_for_instances_obj or self.__task_check_for_instances_obj.done():
-            self.__task_check_for_instances_obj = self.create_task(self.__task_check_for_instances(), "task_check_for_instances")
+        if self.__handshake_completed and self.__localgames_imported:
+            if not self.__task_check_for_instances_obj or self.__task_check_for_instances_obj.done():
+                self.__task_check_for_instances_obj = self.create_task(self.__task_check_for_instances(), "task_check_for_instances")
 
     async def shutdown(self) -> None:
         await self._wgc.shutdown()
 
+        #xmpp
         for xmpp_client in self._xmpp.values():
             xmpp_client.disconnect()
+
+        #time tracker
+        self.__gametime_save_cache()
 
     #
     # Internals
@@ -287,23 +327,35 @@ class WargamingPlugin(Plugin):
         #delete uninstalled games
         for game_id in self.__local_games_states:
             if game_id not in self.__local_applications:
-                self.__change_game_status(game_id, LocalGameState.None_)
+                self.__change_game_status(game_id, LocalGameState.None_, notify)
 
         #change status of installed games
         for game_id, game in self.__local_applications.items():    
             new_state = LocalGameState.Installed | LocalGameState.Running if self.__is_game_running(game) else LocalGameState.Installed
-            
-            status_changed = True
-            if game_id in self.__local_games_states and new_state == self.__local_games_states[game_id]:
-                status_changed = False
 
-            if notify and status_changed:
-                self.__change_game_status(game_id, new_state)
+            status_changed = False
+            if game_id not in self.__local_games_states or new_state != self.__local_games_states[game_id]:
+                status_changed = True
+
+            if status_changed:
+                self.__change_game_status(game_id, new_state, notify)
 
 
-    def __change_game_status(self, game_id: str, new_state: LocalGameState) -> None:
+    def __change_game_status(self, game_id: str, new_state: LocalGameState, notify: bool) -> None:
         self.__local_games_states[game_id] = new_state
-        self.update_local_game_status(LocalGame(game_id, new_state))
+
+        if notify:
+            #notify gametime tracker
+            if new_state == LocalGameState.Installed | LocalGameState.Running:
+                self.__gametime_tracker.start_tracking_game(game_id)
+            else:
+                try:
+                    self.__gametime_tracker.stop_tracking_game(game_id)
+                except GameNotTrackedException:
+                    pass
+
+            #notify GLX client
+            self.update_local_game_status(LocalGame(game_id, new_state))
 
 
     async def __xmpp_get_client(self, client_type: str) -> WgcXMPP:
@@ -312,6 +364,28 @@ class WargamingPlugin(Plugin):
             self._xmpp[client_type].connect()
 
         return self._xmpp[client_type]
+
+
+    def __gametime_load_cache(self) -> Any:
+        gametime_cache = None
+        if "gametime_cache" in self.persistent_cache:
+            gametime_cache = pickle.loads(bytes.fromhex(self.persistent_cache["gametime_cache"]))
+
+        return gametime_cache
+
+    def __gametime_save_cache(self) -> None:
+        gametime_cache = None
+        if self.__gametime_tracker:     
+            try:
+                gametime_cache = self.__gametime_tracker.get_time_cache_hex()
+            except GamesStillBeingTrackedException:
+                pass
+        else:
+            logging.error('plugin/__gametime_save_cache: gametime tracker is not initialized')
+
+        if gametime_cache:
+            self.persistent_cache["gametime_cache"] = gametime_cache
+            self.push_cache()
 
 
 def main():
