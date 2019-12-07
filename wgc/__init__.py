@@ -1,5 +1,6 @@
 from .wgc import WGC
 from .wgc_application_local import WGCLocalApplication
+from .wgc_helper import get_profile_url
 from .wgc_xmpp import WgcXMPP
 
 from .papi_wgnet import PAPIWgnet
@@ -9,6 +10,8 @@ __all__ = (
     'WGC'
     'WGCLocalApplication'
     'WgcXMPP'
+
+    'get_profile_url'
 
     'PAPIWgnet'
     'PAPIWoT'

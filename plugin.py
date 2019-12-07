@@ -5,7 +5,7 @@ import os
 import pickle
 import platform
 import sys
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional
 
 #expand sys.path
 thirdparty =  os.path.join(os.path.dirname(os.path.realpath(__file__)),'3rdparty\\')
@@ -28,7 +28,7 @@ sentry_sdk.init(
     release=("galaxy-integration-wargaming@%s" % manifest['version']))
 
 from galaxy.api.consts import OSCompatibility, Platform, PresenceState
-from galaxy.api.errors import BackendError, InvalidCredentials
+from galaxy.api.errors import BackendError, InvalidCredentials, UnknownError
 from galaxy.api.plugin import Plugin, create_and_run_plugin
 from galaxy.api.types import Authentication, Game, GameTime, LicenseInfo, LicenseType, LocalGame, LocalGameState, NextStep, UserInfo, UserPresence
 import galaxy.proc_tools as proc_tools
@@ -37,7 +37,7 @@ import webbrowser
 
 from galaxyutils.time_tracker import TimeTracker, GameNotTrackedException, GamesStillBeingTrackedException
 
-from wgc import WGC, WGCLocalApplication, PAPIWoT, WgcXMPP
+from wgc import WGC, WGCLocalApplication, PAPIWoT, WgcXMPP, get_profile_url
 
 class WargamingPlugin(Plugin):
     """
@@ -94,7 +94,7 @@ class WargamingPlugin(Plugin):
     # Authentication
     #
 
-    async def authenticate(self, stored_credentials=None):
+    async def authenticate(self, stored_credentials = None):
         if not stored_credentials:
             logging.info('plugin/authenticate: no stored credentials')
 
@@ -203,10 +203,11 @@ class WargamingPlugin(Plugin):
 
         friends = list()
         for user_id, user_name in (await xmpp_client.get_friends()).items():
-            #TODO: avatar
-            #TODO: profile URL
-            friends.append(UserInfo(user_id, user_name, None, None))
+            avatar_url = None
+            profile_url = get_profile_url(xmpp_client.get_game_id(), xmpp_client.get_realm(), user_id)
+            friends.append(UserInfo(user_id, user_name, avatar_url, profile_url))
 
+        logging.info('plugin/get_friends: %s' % friends)
         return friends
 
     #
@@ -254,25 +255,44 @@ class WargamingPlugin(Plugin):
     # ImportUserPresence
     #
 
-    async def get_user_presence(self, user_id: str, context: Any) -> UserPresence:
+    async def prepare_user_presence_context(self, user_id_list: List[str]) -> Any:
+        result = dict()
+
         xmpp_client = await self.__xmpp_get_client('WOT')
-        xmpp_state = await xmpp_client.get_presence(user_id)
 
-        presence_state = PresenceState.Unknown
-        if xmpp_state == 'online':
-            presence_state = PresenceState.Online
-        elif xmpp_state == 'offline':
-            presence_state = PresenceState.Offline
-        elif xmpp_state == 'unknown':
+        for user_id in user_id_list:
+            xmpp_state = await xmpp_client.get_presence(user_id)
+
             presence_state = PresenceState.Unknown
-        else:
-            logging.error('plugin/get_user_presence: unknown presence state %s' % xmpp_state)
+            game_id = None
+            game_title = None
+            status = None #TODO: support WoT Assistant
 
-        #TODO: game id
-        #TODO: game title
-        #TODO: in_game_status
-        #TODO: full status
-        return UserPresence(presence_state, None, None, None, None)
+            if xmpp_state == 'online':
+                presence_state = PresenceState.Online
+                game_id = xmpp_client.get_game_full_id()
+                game_title = xmpp_client.get_game_title()
+            elif xmpp_state == 'offline':
+                presence_state = PresenceState.Offline
+            elif xmpp_state == 'unknown':
+                presence_state = PresenceState.Unknown
+            else:
+                logging.error('plugin/prepare_user_presence_context: unknown presence state %s' % xmpp_state)
+
+            result[user_id] = UserPresence(
+                presence_state = presence_state,
+                game_id = game_id,
+                game_title = game_title,
+                in_game_status = status)
+
+        return result
+
+
+    async def get_user_presence(self, user_id: str, context: Any) -> UserPresence:
+        if user_id not in context:
+            raise UnknownError('plugin/get_user_presence: failed to get info for user %s' % user_id)
+
+        return context[user_id]
 
     #
     # Other

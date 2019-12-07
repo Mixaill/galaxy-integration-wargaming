@@ -37,6 +37,31 @@ class WgcXMPP(slixmpp.ClientXMPP):
 
     #Info
 
+    def get_game_id(self) -> str:
+        '''
+        Returns first part of ID (WOT)
+        '''
+        return self._game
+
+    def get_game_title(self) -> str:
+        '''
+        Returns game full name (World of Tanks (RU))
+        '''
+        if self.get_game_id() == 'WOT':
+            return 'World of Tanks (%s)' % self.get_realm()
+        else:
+            logging.error('WgcXMPP/get_game_title: unknown game id %s' % self.get_game_id())
+            return None
+
+    def get_game_full_id(self) -> str:
+        '''
+        Returns full ID (WOT.RU.PRODUCTION)
+        '''
+        return '%s.%s.%s' % (self.get_game_id(), self.get_realm(), 'PRODUCTION')
+
+    def get_realm(self) -> str:
+        return self._realm
+
     def get_xmpp_jid(self) -> str:
         return '%s@%s/%s' % (self._account_id, self.get_xmpp_domain(), self._game.lower())
 

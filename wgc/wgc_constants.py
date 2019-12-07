@@ -97,3 +97,12 @@ FALLBACK_LANGUAGE = 'en'
 ADDITIONAL_EXECUTABLE_NAMES = {
     'WOT' : [ 'win32/WorldOfTanks.exe' ]
 }
+
+USER_PROFILE_URLS = {
+    'WOT' : {
+        'RU'   : 'https://worldoftanks.ru/ru/community/accounts',
+        'EU'   : 'https://worldoftanks.eu/en/community/accounts',
+        'NA'   : 'https://worldoftanks.com/en/community/accounts',
+        'ASIA' : 'https://worldoftanks.asia/en/community/accounts'
+    }
+}

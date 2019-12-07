@@ -1,5 +1,8 @@
 import ctypes
+import logging
 import os
+
+from .wgc_constants import USER_PROFILE_URLS
 
 ### Process
 DETACHED_PROCESS = 0x00000008
@@ -37,3 +40,14 @@ def fixup_gamename(name):
         return 'Steel Division 2'
 
     return name
+
+def get_profile_url(game_id: str, realm: str, user_id: str) -> str:
+    if game_id not in USER_PROFILE_URLS:
+        logging.error('wgc_helper/get_profile_url: unknown game_id %s' % game_id)
+        return None
+
+    game_urls = USER_PROFILE_URLS[game_id]
+    if realm not in game_urls:
+        logging.error('wgc_helper/get_profile_url: unknown realm %s' % realm)
+
+    return '%s/%s' % (game_urls[realm], user_id)
