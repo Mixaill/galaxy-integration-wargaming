@@ -4,7 +4,7 @@ import subprocess
 import xml.etree.ElementTree as ElementTree
 from typing import Dict, List
 
-from .wgc_constants import WGC_MUTEXES
+from .wgc_constants import ADDITIONAL_EXECUTABLE_NAMES
 from .wgc_helper import DETACHED_PROCESS, is_mutex_exists, fixup_gamename
 
 class WGCLocalApplication():
@@ -49,6 +49,14 @@ class WGCLocalApplication():
         return result.text
 
 
+    def GetGameId(self) -> str:
+        instance_id = self.GetId()
+        if instance_id is None:
+            return None
+
+        return instance_id.split('.')[0]
+
+
     def GetName(self) -> str:
         # metadata v5
         result = self.__metadata.find('shortcut_name')
@@ -78,14 +86,9 @@ class WGCLocalApplication():
         if mtx_config is not None:
             result.append(mtx_config.text)
 
-        #wgc_game_mtx constant
-        game_id = self.GetId().split('.')[0]
-        if game_id in WGC_MUTEXES:
-            result.append(WGC_MUTEXES[game_id])
-
         #unknown version
         if not result:
-            logging.error('WGCLocalApplication/GetMutexName: no mutexes found for application %s' % self.GetId())
+            logging.warning('WGCLocalApplication/GetMutexName: no mutexes found for application %s' % self.GetId())
 
         return result
 
@@ -129,14 +132,19 @@ class WGCLocalApplication():
     def GetGameFolder(self) -> str:
         return self.__folder
 
-    def IsRunning(self) -> bool:
-        for mutex_name in self.GetMutexNames():
-            if is_mutex_exists(mutex_name):
-                return True
-        return False
-
     def GetExecutablePath(self, platform) -> str:
         return os.path.join(self.GetGameFolder(), self.GetExecutableNames()[platform])
+
+    def GetExecutablePaths(self) -> List[str]:
+        result = list()
+        for _, executable_name in self.GetExecutableNames().items():
+            result.append(os.path.join(self.GetGameFolder(), executable_name))
+
+        if self.GetGameId() in ADDITIONAL_EXECUTABLE_NAMES:
+            for exe_name in ADDITIONAL_EXECUTABLE_NAMES[self.GetGameId()]:
+                result.append(os.path.join(self.GetGameFolder(), exe_name))
+
+        return result
 
     def GetWgcapiPath(self) -> str:
         return os.path.join(self.GetGameFolder(), self.WGCAPI_FILE)

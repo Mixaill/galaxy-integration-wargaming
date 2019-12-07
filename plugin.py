@@ -30,9 +30,12 @@ from galaxy.api.consts import OSCompatibility, Platform, PresenceState
 from galaxy.api.errors import BackendError, InvalidCredentials
 from galaxy.api.plugin import Plugin, create_and_run_plugin
 from galaxy.api.types import Authentication, Game, LicenseInfo, LicenseType, LocalGame, LocalGameState, NextStep, UserInfo, UserPresence
+import galaxy.proc_tools as proc_tools
 import webbrowser
 
 from wgc import WGC, PAPIWoT, WgcXMPP
+
+from wgc import WGC, WGCLocalApplication, PAPIWoT, WgcXMPP
 
 class WargamingPlugin(Plugin):
     """
@@ -265,6 +268,19 @@ class WargamingPlugin(Plugin):
         self.__rescan_games(True)
         await asyncio.sleep(self.SLEEP_CHECK_INSTANCES)
 
+
+    def __is_game_running(self, app: WGCLocalApplication) -> bool:
+        for game_path in app.GetExecutablePaths():
+            for pid in proc_tools.pids():
+                proc_path = proc_tools.get_process_info(pid).binary_path
+                if proc_path is None or proc_path == '':
+                    continue
+                if proc_path.lower().replace('\\','/') == game_path.lower().replace('\\','/'):
+                    return True
+
+        return False
+
+
     def __rescan_games(self, notify = False):
         self.__local_applications = self._wgc.get_local_applications()
 
@@ -275,7 +291,7 @@ class WargamingPlugin(Plugin):
 
         #change status of installed games
         for game_id, game in self.__local_applications.items():    
-            new_state = LocalGameState.Installed | LocalGameState.Running if game.IsRunning() else LocalGameState.Installed
+            new_state = LocalGameState.Installed | LocalGameState.Running if self.__is_game_running(game) else LocalGameState.Installed
             
             status_changed = True
             if game_id in self.__local_games_states and new_state == self.__local_games_states[game_id]:

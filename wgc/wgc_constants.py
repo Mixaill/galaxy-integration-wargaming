@@ -94,7 +94,6 @@ PAPI_WOT_REALMS = {
 FALLBACK_COUNTRY = ''
 FALLBACK_LANGUAGE = 'en'
 
-WGC_MUTEXES = {
-    'CLBR': 'wgc_game_mtx_2333225295',
-    'STD2': 'wgc_game_mtx_3816339327',
+ADDITIONAL_EXECUTABLE_NAMES = {
+    'WOT' : [ 'win32/WorldOfTanks.exe' ]
 }
