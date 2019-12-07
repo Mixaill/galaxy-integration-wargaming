@@ -160,7 +160,7 @@ class WargamingPlugin(Plugin):
             webbrowser.open(self._wgc.get_wgc_install_url())
             return
 
-        instances = self._wgc.get_owned_applications(self._wgc.account_realm())
+        instances = await self._wgc.get_owned_applications(self._wgc.account_realm())
         if game_id not in instances:
             logging.warning('plugin/install_games: failed to find the application with id %s' % game_id)
             raise BackendError()
