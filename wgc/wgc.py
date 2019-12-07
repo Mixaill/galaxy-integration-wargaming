@@ -93,6 +93,7 @@ class WGC():
 
     def get_local_applications(self) -> Dict[str, WGCLocalApplication]:
         apps = dict()
+
         for app_dir in WGCLocation.get_apps_dirs():
             #skip missing directories
             if not os.path.exists(app_dir):
@@ -114,7 +115,7 @@ class WGC():
                 #skip if realm is not match our target
                 realm = application_instance.get_application_realm()
                 if target_realm is not None:
-                    if realm != 'WW' and realm != target_realm:
+                    if realm != 'WW' and realm != 'CT' and realm != target_realm:
                         continue
                 
                 applications_instances[key] = application_instance
