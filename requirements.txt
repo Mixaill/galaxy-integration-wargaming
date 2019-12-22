@@ -1,6 +1,6 @@
-aiohttp == 3.5.4
-galaxy.plugin.api == 0.61
-galaxyutils == 0.1.2
+aiohttp == 3.6.2
+galaxy.plugin.api == 0.63
+galaxyutils == 0.1.4
 pysha3 == 1.0.2
-sentry_sdk == 0.13.4
+sentry_sdk == 0.13.5
 slixmpp == 1.4.2

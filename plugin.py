@@ -215,18 +215,10 @@ class WargamingPlugin(Plugin):
     #
 
     async def get_game_time(self, game_id: str, context: Any) -> GameTime:
-        last_played = 0
-        time_played = 0
-
-        cache = self.__gametime_tracker._game_time_cache
-        if game_id in cache:
-            cache_record = cache[game_id]
-            if 'last_played' in cache_record:
-                last_played = cache_record['last_played']
-            if 'time_played' in cache_record:
-                time_played = cache_record['time_played'] 
-
-        return GameTime(game_id, time_played, last_played)
+        try:
+            return self.__gametime_tracker.get_tracked_time(game_id)
+        except GameNotTrackedException:
+            return GameTime(game_id, 0, 0)
 
     #
     # ImportOSCompatibility
