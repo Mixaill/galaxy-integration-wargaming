@@ -14,7 +14,10 @@ class WgcXMPP(slixmpp.ClientXMPP):
         self._token1 = token1
 
         super().__init__(self.get_xmpp_jid(), str(token1), sasl_mech='PLAIN')
-       
+
+        #enable plugins
+        self.register_plugin('xep_0199') #XMPP Ping
+
         #enable authentication via unencrypted PLAIN
         self['feature_mechanisms'].unencrypted_plain = True
 
