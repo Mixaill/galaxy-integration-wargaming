@@ -8,6 +8,7 @@ from .wgc_api import WGCApi
 from .wgc_application_local import WGCLocalApplication
 from .wgc_application_owned import WGCOwnedApplication, WGCOwnedApplicationInstance
 from .wgc_constants import FALLBACK_COUNTRY, FALLBACK_LANGUAGE, WGCInstallDocs
+from .wgc_error import MetadataNotFoundError
 from .wgc_helper import DETACHED_PROCESS
 from .wgc_location import WGCLocation
 from .wgc_xmpp import WgcXMPP
@@ -102,7 +103,9 @@ class WGC():
             try:
                 app = WGCLocalApplication(app_dir)
                 apps[app.GetId()] = app
-            except AttributeError:
+            except MetadataNotFoundError:
+                logging.warning('WGC/get_local_applications: Failed to found game metadata from folder %s. ' % app_dir)
+            except Exception:
                 logging.exception('WGC/get_local_applications: Failed to load game metadata from folder %s. ' % app_dir)
 
         return apps

@@ -5,6 +5,7 @@ import xml.etree.ElementTree as ElementTree
 from typing import Dict, List
 
 from .wgc_constants import ADDITIONAL_EXECUTABLE_NAMES
+from .wgc_error import MetadataNotFoundError
 from .wgc_helper import DETACHED_PROCESS, is_mutex_exists, fixup_gamename
 
 class WGCLocalApplication():
@@ -18,20 +19,16 @@ class WGCLocalApplication():
         self.__gameinfo = None
         self.__metadata = None
 
-        #game_info.xml
         gameinfo_file = os.path.join(self.__folder, self.INFO_FILE)
-        if not os.path.exists(gameinfo_file):
-            logging.error("WGCLocalApplication/__init__: %s does not exists" % gameinfo_file)
-            raise AttributeError("WGCLocalApplication/__init__: %s does not exists" % gameinfo_file)
-        self.__gameinfo = ElementTree.parse(gameinfo_file).getroot()
-
-        #metadata.xml
         metadata_file = os.path.join(self.__folder, self.METADATA_FILE)
-        if not os.path.exists(metadata_file):
-            logging.error("WGCLocalApplication/__init__: %s does not exists" % metadata_file)
-            raise AttributeError("WGCLocalApplication/__init__: %s does not exists" % metadata_file)    
-        self.__metadata = ElementTree.parse(metadata_file).getroot()
 
+        if not os.path.exists(gameinfo_file):
+            raise MetadataNotFoundError("WGCLocalApplication/__init__: %s does not exists" % gameinfo_file)
+        if not os.path.exists(metadata_file):
+            raise MetadataNotFoundError("WGCLocalApplication/__init__: %s does not exists" % metadata_file)  
+
+        self.__gameinfo = ElementTree.parse(gameinfo_file).getroot()
+        self.__metadata = ElementTree.parse(metadata_file).getroot()
 
     def GetId(self) -> str:
         # metadata v5

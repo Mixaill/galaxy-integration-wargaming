@@ -1,0 +1,2 @@
+class MetadataNotFoundError(Exception):
+    pass
