@@ -62,7 +62,9 @@ class WargamingPlugin(Plugin):
       * ImportAchievements
       * ShutdownPlatformClient
       * ImportGameLibrarySettings
-
+      * ImportLocalSize
+      * ImportSubscriptions
+      * ImportSubscriptionGames
     """
 
     SLEEP_CHECK_INSTANCES = 30
