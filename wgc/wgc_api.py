@@ -78,17 +78,18 @@ class WGCAuthorizationServer():
 
         #check data
         data_valid = True
-        if 'realm' not in data:
+        if 'realm' not in data or not data['realm']:
+            logging.warning('wgc_auth_server/handle_login_post: data is not valid, realm is missing')
             data_valid = False
-        if 'email' not in data:
+        if 'email' not in data or not data['email']:
+            logging.warning('wgc_auth_server/handle_login_post: data is not valid, email is missing')
             data_valid = False
-        if 'password' not in data:
+        if 'password' not in data or not data['password']:
+            logging.warning('wgc_auth_server/handle_login_post: data is not valid, password is missing')
             data_valid = False
 
         if data_valid:
             auth_result = await self.__backend.do_auth_emailpass(data['realm'], data['email'], data['password'])
-        else:
-            logging.warning('wgc_auth_server/handle_login_post: data is not valid')
 
         self.__process_auth_result(auth_result)
 
@@ -97,7 +98,7 @@ class WGCAuthorizationServer():
         data = await request.post()
 
         auth_result = WGCAuthorizationResult.INCORRECT_2FA
-        if 'authcode' in data:
+        if 'authcode' in data and data['authcode']:
             use_backup_code = True if 'use_backup' in data else False
             auth_result = await self.__backend.do_auth_2fa(data['authcode'], use_backup_code)
 
