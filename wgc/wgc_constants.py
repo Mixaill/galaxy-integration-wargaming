@@ -1,3 +1,6 @@
+# (c) 2019-2020 Mikhail Paulyshka
+# SPDX-License-Identifier: MIT
+
 from enum import Enum
 
 class WGCAuthorizationResult(Enum):

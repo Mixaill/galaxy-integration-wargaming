@@ -1,3 +1,6 @@
+# (c) 2019-2020 Mikhail Paulyshka
+# SPDX-License-Identifier: MIT
+
 import ctypes
 import logging
 import os

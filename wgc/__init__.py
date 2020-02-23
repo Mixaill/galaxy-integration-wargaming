@@ -1,3 +1,6 @@
+# (c) 2019-2020 Mikhail Paulyshka
+# SPDX-License-Identifier: MIT
+
 from .wgc import WGC
 from .wgc_application_local import WGCLocalApplication
 from .wgc_helper import get_profile_url

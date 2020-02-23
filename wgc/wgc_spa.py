@@ -1,3 +1,6 @@
+# (c) 2019-2020 Mikhail Paulyshka
+# SPDX-License-Identifier: MIT
+
 from typing import Dict, List
 
 from .wgc_constants import SPAIDRealms
