@@ -669,6 +669,10 @@ class WGCApi:
             self.__get_url('wgcps', self.__login_info['realm'], self.WGCPS_FETCH_PRODUCT_INFO), 
             json = { 'account_id' : self.get_account_id(), 'country' : self._country_code, 'storefront' : 'wgc_showcase' })
 
+        if response.status == 504:
+            logging.exception('wgc_auth/__wgcps_fetch_product_list: failed to get data: gateway timeout %s' % response.status)
+            return None
+
         response_content = None
         try:
             response_content = json.loads(response.text)
@@ -688,7 +692,7 @@ class WGCApi:
         response_content['data']['product_content'] = list()
         for product_uri in response_content['data']['product_uris']:
             product_response = await self.request_get(product_uri)
-            if response.status != 200:
+            if product_response.status != 200:
                 logging.error('wgc_auth/__wgcps_fetch_product_list: error on retrieving product info: %s' % product_uri)
                 continue
 
