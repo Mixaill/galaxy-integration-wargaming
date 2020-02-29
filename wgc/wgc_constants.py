@@ -38,17 +38,17 @@ XMPPRealms = {
         'EU' : {
             'host'  : 'woteu34.xmpp.wargaming.net',
             'port'  : 5222,
-            'domain': 'wot-eu.loc',
+            'domain': 'c2s.xmpp-wot-eu.wargaming.net',
         },
         'NA' : {
             'host'  : 'wotna34.xmpp.wargaming.net',
             'port'  : 5222,
-            'domain': 'wot-na.loc',
+            'domain': 'c2s.xmpp-wot-na.wargaming.net',
         },
         'ASIA' : {
             'host'  : 'wotasia34.xmpp.wargaming.net',
             'port'  : 5222,
-            'domain': 'wot-asia.loc',
+            'domain': 'c2s.wotasia.xmpp.wargaming.net',
         }
     }
 }
