@@ -347,8 +347,12 @@ class WargamingPlugin(Plugin):
                 self.__change_game_status(game_id, LocalGameState.None_, notify)
 
         #change status of installed games
-        for game_id, game in self.__local_applications.items():    
-            new_state = LocalGameState.Installed | LocalGameState.Running if self.__is_game_running(game) else LocalGameState.Installed
+        for game_id, game in self.__local_applications.items():
+            new_state = LocalGameState.None_
+            if self.__is_game_running(game):
+                new_state = LocalGameState.Installed | LocalGameState.Running
+            elif game.IsInstalled():
+                new_state = LocalGameState.Installed
 
             status_changed = False
             if game_id not in self.__local_games_states or new_state != self.__local_games_states[game_id]:

@@ -126,8 +126,8 @@ class WGCLocalApplication():
 
         return executables.keys()
 
-    def IsInstalled(self) -> str:
-        return bool(self.__gameinfo.find('game/installed').text)
+    def IsInstalled(self) -> bool:
+        return self.__gameinfo.find('game/installed').text == 'true'
 
     def GetGameFolder(self) -> str:
         return self.__folder
