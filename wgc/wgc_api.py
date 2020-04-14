@@ -651,6 +651,8 @@ class WGCApi:
             if app_gameid in GAMES_F2P or app_gameid in purchased_gameids:
                 is_purchased = app_gameid in purchased_gameids and app_gameid not in GAMES_F2P
                 product_list.append(WGCOwnedApplication(product, is_purchased))
+            else:
+                logging.warning('wgc_api/fetch_product_list: unknown ID %s' % app_gameid)
 
         return product_list
 
