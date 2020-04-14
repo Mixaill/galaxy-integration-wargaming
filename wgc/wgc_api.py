@@ -21,7 +21,7 @@ import aiohttp.web
 import sha3
 
 from .wgc_application_owned import WGCOwnedApplication
-from .wgc_constants import WGCAuthorizationResult, WGCRealms
+from .wgc_constants import WGCAuthorizationResult, WGCRealms, GAMES_F2P
 
 class WGCAuthorizationServer():
 
@@ -116,7 +116,7 @@ class WGCAuthorizationServer():
             raise aiohttp.web.HTTPFound('/login_failed')
 
 class WGCApi:
-    HTTP_USER_AGENT = 'wgc/19.03.00.5220'
+    HTTP_USER_AGENT = 'wgc/20.01.00.9514'
 
     OAUTH_GRANT_TYPE_BYPASSWORD = 'urn:wargaming:params:oauth:grant-type:basic'
     OAUTH_GRANT_TYPE_BYTOKEN = 'urn:wargaming:params:oauth:grant-type:access-token'
@@ -133,8 +133,6 @@ class WGCApi:
 
     LOCALSERVER_HOST = '127.0.0.1'
     LOCALSERVER_PORT = 13337
-
-    GAMES_F2P = ['WOT', 'WOWS', 'WOWP']
 
     def __init__(self, tracking_id : str = '', country_code : str = '', language_code : str = 'en'):
         self._tracking_id = tracking_id
@@ -650,8 +648,8 @@ class WGCApi:
             except:
                 logging.exception('wgc_api/fetch_product_list: failed to get app_id')
 
-            if app_gameid in self.GAMES_F2P or app_gameid in purchased_gameids:
-                is_purchased = app_gameid in purchased_gameids and app_gameid not in self.GAMES_F2P
+            if app_gameid in GAMES_F2P or app_gameid in purchased_gameids:
+                is_purchased = app_gameid in purchased_gameids and app_gameid not in GAMES_F2P
                 product_list.append(WGCOwnedApplication(product, is_purchased))
 
         return product_list
