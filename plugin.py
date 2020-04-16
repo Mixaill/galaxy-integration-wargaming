@@ -208,7 +208,7 @@ class WargamingPlugin(Plugin):
 
         friends = list()
         for user_id, user_name in (await xmpp_client.get_friends()).items():
-            avatar_url = None
+            avatar_url = 'https://ru.wargaming.net/clans/media/clans/emblems/cl_307/163307/emblem_195x195.png'
             profile_url = get_profile_url(xmpp_client.get_game_id(), xmpp_client.get_realm(), user_id)
             friends.append(UserInfo(user_id, user_name, avatar_url, profile_url))
 
@@ -256,34 +256,10 @@ class WargamingPlugin(Plugin):
         result = dict()
 
         xmpp_client = await self.__xmpp_get_client('WOT')
-
         for user_id in user_id_list:
-            xmpp_state = await xmpp_client.get_presence(user_id)
-
-            presence_state = PresenceState.Unknown
-            game_id = None
-            game_title = None
-            status = None #TODO: support WoT Assistant
-
-            if xmpp_state == 'online':
-                presence_state = PresenceState.Online
-                game_id = xmpp_client.get_game_full_id()
-                game_title = xmpp_client.get_game_title()
-            elif xmpp_state == 'offline':
-                presence_state = PresenceState.Offline
-            elif xmpp_state == 'unknown':
-                presence_state = PresenceState.Unknown
-            else:
-                logging.error('plugin/prepare_user_presence_context: unknown presence state %s' % xmpp_state)
-
-            result[user_id] = UserPresence(
-                presence_state = presence_state,
-                game_id = game_id,
-                game_title = game_title,
-                in_game_status = status)
+            result[user_id] = await self.__xmpp_get_gog_presence(xmpp_client.get_presence_userid(user_id))
 
         return result
-
 
     async def get_user_presence(self, user_id: str, context: Any) -> UserPresence:
         if user_id not in context:
@@ -378,14 +354,69 @@ class WargamingPlugin(Plugin):
             #notify GLX client
             self.update_local_game_status(LocalGame(game_id, new_state))
 
+    #
+    # Internals/XMPP
+    #
 
     async def __xmpp_get_client(self, client_type: str) -> WgcXMPP:
         if client_type not in self._xmpp:
             self._xmpp[client_type] = await self._wgc.get_xmpp_client(client_type)
+            self._xmpp[client_type].add_event_handler('got_online', self.__xmpp_on_got_online)
+            self._xmpp[client_type].add_event_handler('got_offline', self.__xmpp_on_got_offline)
             self._xmpp[client_type].connect()
 
         return self._xmpp[client_type]
 
+    async def __xmpp_on_got_online(self, presence) -> None:
+        xmpp_client = await self.__xmpp_get_client('WOT')
+        
+        user_id = xmpp_client.get_user_name_from_jid(presence['from'])
+        if not user_id:
+            return
+
+        xmpp_presence = xmpp_client.get_presence_jid(presence['from'])
+        user_presence = await self.__xmpp_get_gog_presence(xmpp_presence)
+        self.update_user_presence(user_id, user_presence)
+
+
+    async def __xmpp_on_got_offline(self, presence) -> None:
+        xmpp_client = await self.__xmpp_get_client('WOT')
+
+        user_id = xmpp_client.get_user_name_from_jid(presence['from'])
+        if not user_id:
+            return
+
+        self.update_user_presence(user_id, UserPresence(presence_state = PresenceState.Offline))
+
+
+    async def __xmpp_get_gog_presence(self, xmpp_presence: str) -> UserPresence:
+        xmpp_client = await self.__xmpp_get_client('WOT')
+
+        presence_state = PresenceState.Unknown
+        game_id = None
+        game_title = None
+        status = None
+
+        if xmpp_presence == 'online':
+            presence_state = PresenceState.Online
+            game_id = xmpp_client.get_game_full_id()
+            game_title = xmpp_client.get_game_title()
+        elif xmpp_presence == 'mobile':
+            presence_state = PresenceState.Online
+        elif xmpp_presence == 'offline':
+            presence_state = PresenceState.Offline
+        else:
+            logging.error('plugin/__xmpp_get_gog_presence: unknown presence state %s' % xmpp_presence)
+
+        return UserPresence(
+            presence_state = presence_state,
+            game_id = game_id,
+            game_title = game_title,
+            in_game_status = status)
+
+    #
+    # Internals/Gametime
+    #
 
     def __gametime_load_cache(self) -> Any:
         gametime_cache = None

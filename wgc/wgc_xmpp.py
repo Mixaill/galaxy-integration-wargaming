@@ -6,7 +6,7 @@ from typing import Dict
 
 import slixmpp
 
-from .wgc_constants import XMPPRealms
+from .wgc_constants import XMPPRealms, XMPPPresence
 
 class WgcXMPP(slixmpp.ClientXMPP):
     def __init__(self, game, realm, account_id, token1):
@@ -40,6 +40,7 @@ class WgcXMPP(slixmpp.ClientXMPP):
         pass
 
 
+
     #Info
 
     def get_game_id(self) -> str:
@@ -50,13 +51,9 @@ class WgcXMPP(slixmpp.ClientXMPP):
 
     def get_game_title(self) -> str:
         '''
-        Returns game full name (World of Tanks (RU))
+        Returns game full name
         '''
-        if self.get_game_id() == 'WOT':
-            return 'World of Tanks (%s)' % self.get_realm()
-        else:
-            logging.error('WgcXMPP/get_game_title: unknown game id %s' % self.get_game_id())
-            return None
+        return XMPPRealms[self._game][self._realm]['title']
 
     def get_game_full_id(self) -> str:
         '''
@@ -68,7 +65,7 @@ class WgcXMPP(slixmpp.ClientXMPP):
         return self._realm
 
     def get_xmpp_jid(self) -> str:
-        return '%s@%s/%s' % (self._account_id, self.get_xmpp_domain(), self._game.lower())
+        return '%s@%s/%s' % (self._account_id, self.get_xmpp_domain(), XMPPRealms[self._game][self._realm]['res'])
 
     def get_xmpp_host(self) -> str:
         return XMPPRealms[self._game][self._realm]['host']
@@ -89,22 +86,39 @@ class WgcXMPP(slixmpp.ClientXMPP):
         
         return False
 
+    @staticmethod
+    def get_user_id_from_jid(jid: str) -> str:
+        return jid.split('@', 1)[0]
+
+    def get_user_name_from_jid(self, jid: str) -> str:
+        name = self.client_roster[jid]['name']
+        if not name:
+            return None
+
+        return '%s_%s' % (self._realm, self.client_roster[jid]['name'])
 
     async def get_friends(self) -> Dict[str,str]:
         result = dict()
 
         for jid in self.client_roster:
-            user_id = jid.split('@', 1)[0]
+            user_id = WgcXMPP.get_user_id_from_jid(jid)
             if user_id == str(self._account_id):
                 continue
-            result[user_id] =  '%s_%s' % (self._realm, self.client_roster[jid]['name'])
-
+            result[user_id] = self.get_user_name_from_jid(jid)
         return result
 
-
-    async def get_presence(self, user_id: str) -> str:
+    def get_presence_userid(self, user_id: str) -> str:
         for jid in self.client_roster:
-            if jid.split('@', 1)[0] == str(user_id):
-                return 'online' if self._game.lower() in self.client_roster[jid].resources else 'offline'
+            if WgcXMPP.get_user_id_from_jid(jid) == str(user_id):
+                for key,val in XMPPPresence[self.get_game_id()].items():
+                    if val in self.client_roster[jid].resources:
+                        return key
 
-        return 'unknown'
+        return 'offline'
+
+    def get_presence_jid(self, jid) -> str:
+        for key,val in XMPPPresence[self.get_game_id()].items():
+            if val == jid.resource:
+                return key
+
+        return 'offline'
