@@ -341,6 +341,8 @@ class WGCApi:
                 if token_data_bypassword['error_description'] == 'twofactor_required':
                     self.__login_info_temp['twofactor_token'] = token_data_bypassword['twofactor_token']
                     return WGCAuthorizationResult.REQUIRES_2FA
+                elif token_data_bypassword['error_description'] == 'Invalid username parameter value.':
+                    return WGCAuthorizationResult.INVALID_LOGINPASS
                 elif token_data_bypassword['error_description'] == 'Invalid password parameter value.':
                     return WGCAuthorizationResult.INVALID_LOGINPASS
                 elif token_data_bypassword['error_description'] == 'Request is missing password parameter.':
@@ -391,7 +393,11 @@ class WGCApi:
         if token_data_byotp['status_code'] != 200:
             if 'error_description' in token_data_byotp:
                 error_desc = token_data_byotp['error_description'] 
-                if error_desc == 'twofactor_invalid' or error_desc == 'Invalid otp_code parameter value.':
+                if error_desc == 'twofactor_invalid':
+                    return WGCAuthorizationResult.INCORRECT_2FA
+                elif error_desc == 'Invalid otp_code parameter value.':
+                    return WGCAuthorizationResult.INCORRECT_2FA
+                elif error_desc == 'Invalid twofactor token.':
                     return WGCAuthorizationResult.INCORRECT_2FA
                 if error_desc == 'Invalid backup_code parameter value.':
                     return WGCAuthorizationResult.INCORRECT_2FA_BACKUP
@@ -669,6 +675,10 @@ class WGCApi:
         response = await self.request_post(
             self.__get_url('wgcps', self.__login_info['realm'], self.WGCPS_FETCH_PRODUCT_INFO), 
             json = { 'account_id' : self.get_account_id(), 'country' : self._country_code, 'storefront' : 'wgc_showcase' })
+
+        if response.status == 502:
+            logging.warning('wgc_auth/__wgcps_fetch_product_list: failed to get data: bad gateway')
+            return None
 
         if response.status == 504:
             logging.warning('wgc_auth/__wgcps_fetch_product_list: failed to get data: gateway timeout')
