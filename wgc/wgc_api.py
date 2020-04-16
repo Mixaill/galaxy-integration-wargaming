@@ -671,7 +671,7 @@ class WGCApi:
             json = { 'account_id' : self.get_account_id(), 'country' : self._country_code, 'storefront' : 'wgc_showcase' })
 
         if response.status == 504:
-            logging.exception('wgc_auth/__wgcps_fetch_product_list: failed to get data: gateway timeout %s' % response.status)
+            logging.warning('wgc_auth/__wgcps_fetch_product_list: failed to get data: gateway timeout')
             return None
 
         response_content = None
