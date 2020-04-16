@@ -17,20 +17,32 @@ class WGCLocation():
     WGC_EXECUTABLE_NAME = 'WGC.exe'
 
     @staticmethod
-    def get_wgc_programdata_dir():
-        return os.path.join(os.getenv('PROGRAMDATA'), WGCLocation.WGC_PROGRAMDATA_DIR)
+    def get_wgc_programdata_dir() -> str:
+        program_data = os.getenv('PROGRAMDATA')
+        if not program_data:
+            return None
+        return os.path.join(program_data, WGCLocation.WGC_PROGRAMDATA_DIR)
 
     @staticmethod
-    def get_wgc_wgcpath_file():
-        return os.path.join(os.getenv('PROGRAMDATA'), WGCLocation.WGC_PATH_FILE)
+    def get_wgc_wgcpath_file() -> str:
+        program_data = os.getenv('PROGRAMDATA')
+        if not program_data:
+            return None
+        return os.path.join(program_data, WGCLocation.WGC_PATH_FILE)
 
     @staticmethod
-    def get_wgc_trackingid_file():
-        return os.path.join(os.getenv('PROGRAMDATA'), WGCLocation.WGC_TRACKING_FILE)
+    def get_wgc_trackingid_file() -> str:
+        program_data = os.getenv('PROGRAMDATA')
+        if not program_data:
+            return None
+        return os.path.join(program_data, WGCLocation.WGC_TRACKING_FILE)
 
     @staticmethod
-    def get_wgc_apps_dir():
-        return os.path.join(os.getenv('PROGRAMDATA'), WGCLocation.WGC_APPSLOCATION_DIR)
+    def get_wgc_apps_dir() -> str:
+        program_data = os.getenv('PROGRAMDATA')
+        if not program_data:
+            return None
+        return os.path.join(program_data, WGCLocation.WGC_APPSLOCATION_DIR)
 
     @staticmethod
     def get_wgc_dir() -> str: 
