@@ -1,48 +1,54 @@
 # (c) 2019-2020 Mikhail Paulyshka
 # SPDX-License-Identifier: MIT
 
+import logging
 import os
+from pathlib import Path
 from typing import List
+
 
 from .wgc_helper import scantree
 
 class WGCLocation():
+    
+    WGC_PROGRAMDATA_DIR = 'Wargaming.net/GameCenter/'
 
-    WGC_APPSLOCATION_DIR = 'Wargaming.net\\GameCenter\\apps\\'
-    WGC_PATH_FILE = 'Wargaming.net\\GameCenter\\data\\wgc_path.dat'
-    WGC_TRACKING_FILE = 'Wargaming.net\\GameCenter\\data\\wgc_tracking_id.dat'
-    WGC_PROGRAMDATA_DIR = 'Wargaming.net\\GameCenter\\'
+    WGC_APPSLOCATION_DIR = 'apps/'
+    WGC_PATH_FILE = 'data/wgc_path.dat'
+    WGC_TRACKING_FILE = 'data/wgc_tracking_id.dat'
 
     WGC_PREFERENCES_FILE = 'preferences.xml'  
-    WGC_EXECUTABLE_NAME = 'WGC.exe'
+    WGC_EXECUTABLE_NAME = 'wgc.exe'
+    WGC_GAMES_RESTRICTIONS = 'games_restrictions.xml'
+
+    WGC_MACOS_PROGRAMDATA_DIR = os.path.join(Path.home(), 'Library/Application Support/Wargaming.net Game Center/Bottles/wargaminggamecenter64/drive_c/ProgramData/Wargaming.net/GameCenter/')
+    WGC_MACOS_WGC_DIR         = os.path.join(Path.home(), 'Library/Application Support/Wargaming.net Game Center/Bottles/wargaminggamecenter64/drive_c/Program Files (x86)/Wargaming.net/GameCenter/')
+
 
     @staticmethod
     def get_wgc_programdata_dir() -> str:
-        program_data = os.getenv('PROGRAMDATA')
-        if not program_data:
-            return ''
-        return os.path.join(program_data, WGCLocation.WGC_PROGRAMDATA_DIR)
+        #Windows
+        if os.getenv('PROGRAMDATA'):
+            return os.path.join(os.getenv('PROGRAMDATA'), WGCLocation.WGC_PROGRAMDATA_DIR)
+
+        #macOS
+        if os.path.exists(WGCLocation.WGC_MACOS_PROGRAMDATA_DIR):
+            return WGCLocation.WGC_MACOS_PROGRAMDATA_DIR
+
+        logging.getLogger('WGC/Location').warn('get_wgc_programdata_dir: WGC ProgramData directory was not found')
+        return ''
 
     @staticmethod
     def get_wgc_wgcpath_file() -> str:
-        program_data = os.getenv('PROGRAMDATA')
-        if not program_data:
-            return ''
-        return os.path.join(program_data, WGCLocation.WGC_PATH_FILE)
+        return os.path.join(WGCLocation.get_wgc_programdata_dir(), WGCLocation.WGC_PATH_FILE)
 
     @staticmethod
     def get_wgc_trackingid_file() -> str:
-        program_data = os.getenv('PROGRAMDATA')
-        if not program_data:
-            return ''
-        return os.path.join(program_data, WGCLocation.WGC_TRACKING_FILE)
+        return os.path.join(WGCLocation.get_wgc_programdata_dir(), WGCLocation.WGC_TRACKING_FILE)
 
     @staticmethod
     def get_wgc_apps_dir() -> str:
-        program_data = os.getenv('PROGRAMDATA')
-        if not program_data:
-            return ''
-        return os.path.join(program_data, WGCLocation.WGC_APPSLOCATION_DIR)
+        return os.path.join(WGCLocation.get_wgc_programdata_dir(), WGCLocation.WGC_APPSLOCATION_DIR)
 
     @staticmethod
     def get_wgc_dir() -> str: 
@@ -59,6 +65,10 @@ class WGCLocation():
         wgc_programdata_dir = WGCLocation.get_wgc_programdata_dir()
         if os.path.exists(os.path.join(wgc_programdata_dir, WGCLocation.WGC_EXECUTABLE_NAME)):
             return wgc_programdata_dir
+
+        #fall back to macos path
+        if os.path.exists(WGCLocation.WGC_MACOS_WGC_DIR):
+            return WGCLocation.WGC_MACOS_WGC_DIR
 
         return None       
 
