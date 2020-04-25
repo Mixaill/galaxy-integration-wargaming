@@ -18,10 +18,11 @@ from urllib.parse import parse_qs
 
 import aiohttp
 import aiohttp.web
-import sha3
+import certifi
 
 from .wgc_application_owned import WGCOwnedApplication
 from .wgc_constants import WGCAuthorizationResult, WGCRealms, GAMES_F2P
+from .wgc_keccak import Keccak512
 
 class WGCAuthorizationServer():
 
@@ -502,7 +503,7 @@ class WGCApi:
 
         pow_number = 0
         while True:
-            keccak_hash = sha3.keccak_512()
+            keccak_hash = Keccak512()
             keccak_hash.update(hashcash_str+str(pow_number).encode('utf-8'))
 
             if keccak_hash.hexdigest().startswith(prefix):

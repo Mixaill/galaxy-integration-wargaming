@@ -1,6 +1,5 @@
 aiohttp == 3.6.2
 galaxy.plugin.api == 0.65
 galaxyutils == 0.1.5
-pysha3 == 1.0.2
 sentry_sdk == 0.14.3
 slixmpp == 1.4.2
