@@ -10,6 +10,7 @@ import platform
 import pprint
 import random
 import string
+import ssl
 import sys
 import threading
 from typing import Any, Dict, List
@@ -145,8 +146,11 @@ class WGCApi:
         self.__login_info = None
         self.__login_info_temp = None
 
+        #aiohhtp
+        self.__sslcontext = ssl.create_default_context(cafile=certifi.where())
+        self.__connector = aiohttp.TCPConnector(ssl_context=self.__sslcontext)
         self.__session_headers = {'User-Agent': self.HTTP_USER_AGENT}
-        self.__session = aiohttp.ClientSession(headers = {'User-Agent': self.HTTP_USER_AGENT})
+        self.__session = aiohttp.ClientSession(connector=self.__connector, headers = self.__session_headers)
 
     async def shutdown(self):
         if self.__server is not None:
