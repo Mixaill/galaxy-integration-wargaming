@@ -11,7 +11,7 @@ import sys
 from typing import Any, Dict, List, Optional
 
 #expand sys.path
-thirdparty =  os.path.join(os.path.dirname(os.path.realpath(__file__)),'3rdparty\\')
+thirdparty =  os.path.join(os.path.dirname(os.path.realpath(__file__)),'3rdparty/')
 if thirdparty not in sys.path:
     sys.path.insert(0, thirdparty)
 

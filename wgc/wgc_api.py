@@ -55,22 +55,22 @@ class WGCAuthorizationServer():
         await self.__runner.cleanup()
 
     async def handle_login_get(self, request):
-        return aiohttp.web.FileResponse(os.path.join(os.path.dirname(os.path.realpath(__file__)),'html\\login.html'))
+        return aiohttp.web.FileResponse(os.path.join(os.path.dirname(os.path.realpath(__file__)),'html/login.html'))
 
     async def handle_unsupported_platform_get(self, request):
-        return aiohttp.web.FileResponse(os.path.join(os.path.dirname(os.path.realpath(__file__)),'html\\unsupported_platform.html'))
+        return aiohttp.web.FileResponse(os.path.join(os.path.dirname(os.path.realpath(__file__)),'html/unsupported_platform.html'))
 
     async def handle_login_failed_get(self, request):
-        return aiohttp.web.FileResponse(os.path.join(os.path.dirname(os.path.realpath(__file__)),'html\\login_failed.html'))
+        return aiohttp.web.FileResponse(os.path.join(os.path.dirname(os.path.realpath(__file__)),'html/login_failed.html'))
 
     async def handle_2fa_get(self, request):
-        return aiohttp.web.FileResponse(os.path.join(os.path.dirname(os.path.realpath(__file__)),'html\\2fa.html'))
+        return aiohttp.web.FileResponse(os.path.join(os.path.dirname(os.path.realpath(__file__)),'html/2fa.html'))
 
     async def handle_2fa_failed_get(self, request):
-        return aiohttp.web.FileResponse(os.path.join(os.path.dirname(os.path.realpath(__file__)),'html\\2fa_failed.html'))
+        return aiohttp.web.FileResponse(os.path.join(os.path.dirname(os.path.realpath(__file__)),'html/2fa_failed.html'))
 
     async def handle_finished_get(self, request):
-        return aiohttp.web.FileResponse(os.path.join(os.path.dirname(os.path.realpath(__file__)),'html\\finished.html'))
+        return aiohttp.web.FileResponse(os.path.join(os.path.dirname(os.path.realpath(__file__)),'html/finished.html'))
 
     async def handle_login_post(self, request):
         data = await request.post()

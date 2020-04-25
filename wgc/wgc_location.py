@@ -20,28 +20,28 @@ class WGCLocation():
     def get_wgc_programdata_dir() -> str:
         program_data = os.getenv('PROGRAMDATA')
         if not program_data:
-            return None
+            return ''
         return os.path.join(program_data, WGCLocation.WGC_PROGRAMDATA_DIR)
 
     @staticmethod
     def get_wgc_wgcpath_file() -> str:
         program_data = os.getenv('PROGRAMDATA')
         if not program_data:
-            return None
+            return ''
         return os.path.join(program_data, WGCLocation.WGC_PATH_FILE)
 
     @staticmethod
     def get_wgc_trackingid_file() -> str:
         program_data = os.getenv('PROGRAMDATA')
         if not program_data:
-            return None
+            return ''
         return os.path.join(program_data, WGCLocation.WGC_TRACKING_FILE)
 
     @staticmethod
     def get_wgc_apps_dir() -> str:
         program_data = os.getenv('PROGRAMDATA')
         if not program_data:
-            return None
+            return ''
         return os.path.join(program_data, WGCLocation.WGC_APPSLOCATION_DIR)
 
     @staticmethod
