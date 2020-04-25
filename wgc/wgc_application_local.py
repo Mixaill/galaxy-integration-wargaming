@@ -1,9 +1,10 @@
+# (c) 2019-2020 Mikhail Paulyshka
+# SPDX-License-Identifier: MIT
+
 import logging
 import os
 import subprocess
 import xml.etree.ElementTree as ElementTree
-# (c) 2019-2020 Mikhail Paulyshka
-# SPDX-License-Identifier: MIT
 
 from typing import Dict, List
 

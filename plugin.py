@@ -100,13 +100,7 @@ class WargamingPlugin(Plugin):
         self.__local_games_states = dict()
         self.__local_applications = dict()
 
-        self.__platform = 'unknown'
-        if platform.system() == 'Windows':
-            self.__platform = 'windows'
-        elif platform.system() == 'Darwin':
-            self.__platform = 'macos'
-        else:
-            logging.error('plugin/__init__: unknown platform %s' % platform)
+        self.__platform = get_platform()
 
     #
     # Authentication
