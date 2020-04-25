@@ -12,6 +12,7 @@ from .wgc_application_local import WGCLocalApplication
 from .wgc_application_owned import WGCOwnedApplication, WGCOwnedApplicationInstance
 from .wgc_constants import FALLBACK_COUNTRY, FALLBACK_LANGUAGE, WGCInstallDocs
 from .wgc_error import MetadataNotFoundError
+from .wgc_gamerestrictions import WGCGameRestrictions
 from .wgc_helper import DETACHED_PROCESS
 from .wgc_location import WGCLocation
 from .wgc_xmpp import WgcXMPP
@@ -141,6 +142,16 @@ class WGC():
             subprocess.Popen([WGCLocation.get_wgc_exe_path(), '--background' if minimized else ''], creationflags=DETACHED_PROCESS)
         else:
             logging.warning('WGC/launch_client: WGC is not installed')
+
+    # Game Restrictions
+
+    def get_game_restrictions(self) -> WGCGameRestrictions:
+        game_restrictions_file = WGCLocation.get_wgc_gamerestrictions_file()
+
+        if not game_restrictions_file:
+            return None
+
+        return WGCGameRestrictions(game_restrictions_file)
 
     # XMPP
     

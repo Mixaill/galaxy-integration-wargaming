@@ -242,14 +242,33 @@ class WargamingPlugin(Plugin):
     # ImportOSCompatibility
     #
 
-    async def get_os_compatibility(self, game_id: str, context: Any) -> Optional[OSCompatibility]:
-        if game_id not in self.__local_applications:
-            #TODO: find a way to get OS compat from owned application, not local
-            #logging.warning('plugin/get_os_compatibility: unknown game_id %s' % game_id)
-            return OSCompatibility.Windows
+    async def prepare_os_compatibility_context(self, game_ids: List[str]) -> Any:     
+        result = dict()
+
+        game_restrictions = self._wgc.get_game_restrictions()
+        current_platform = get_platform()
+
+        for game_id in game_ids:
+            #populate from local app
+            if game_id in self.__local_applications:
+                result[game_id] = self.__local_applications[game_id].GetOsCompatibility()
+                continue
+
+            #windows is supported in any way
+            result[game_id] = ['windows']
+
+            #populate from game restriction for non-windows platform
+            if current_platform != 'windows' and game_restrictions:
+                if game_id in game_restrictions.get_allowed_ids():
+                    result[game_id].append(current_platform)
+
+        return result
+
+    async def get_os_compatibility(self, game_id: str, context: Any) -> Optional[OSCompatibility]:      
+        game = context[game_id]
 
         result = None
-        for platform in self.__local_applications[game_id].GetOsCompatibility():
+        for platform in game:
             if platform == 'windows':
                 result = OSCompatibility.Windows if result is None else result | OSCompatibility.Windows
             elif platform == 'macos':

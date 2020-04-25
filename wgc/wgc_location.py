@@ -93,6 +93,18 @@ class WGCLocation():
         return preferences_path
 
     @staticmethod
+    def get_wgc_gamerestrictions_file() -> str:
+        wgc_dir = WGCLocation.get_wgc_dir();
+        if not wgc_dir:
+            return ''
+
+        gamerestrictions_path = os.path.join(wgc_dir, WGCLocation.WGC_GAMES_RESTRICTIONS)
+        if not os.path.exists(gamerestrictions_path):
+            return ''
+
+        return gamerestrictions_path
+
+    @staticmethod
     def get_apps_dirs() -> List[str]:
         apps = list()
 
