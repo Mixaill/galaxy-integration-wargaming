@@ -237,10 +237,7 @@ class WGCApi:
     #
 
     def auth_server_uri(self) -> str:
-        if platform.system() == 'Windows':
-            return 'http://%s:%s/login' % (self.LOCALSERVER_HOST, self.LOCALSERVER_PORT)
-        
-        return 'http://%s:%s/unsupported_platform' % (self.LOCALSERVER_HOST, self.LOCALSERVER_PORT)
+        return 'http://%s:%s/login' % (self.LOCALSERVER_HOST, self.LOCALSERVER_PORT)
 
     async def auth_server_start(self) -> bool:
 
