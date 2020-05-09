@@ -74,6 +74,9 @@ class WGCLocation():
 
     @staticmethod
     def get_wgc_exe_path() -> str:
+        '''
+        returns path to the wgc.exe file
+        '''
         wgc_dir = WGCLocation.get_wgc_dir()
         if wgc_dir is None:
             return None
@@ -82,6 +85,9 @@ class WGCLocation():
     
     @staticmethod
     def get_wgc_preferences_file() -> str:
+        '''
+        returns path to the preferences.xml file
+        '''
         wgc_dir = WGCLocation.get_wgc_dir()
         if wgc_dir is None:
             return None
@@ -94,6 +100,9 @@ class WGCLocation():
 
     @staticmethod
     def get_wgc_gamerestrictions_file() -> str:
+        '''
+        returns path to the games_restrictions.xml file
+        '''
         wgc_dir = WGCLocation.get_wgc_dir();
         if not wgc_dir:
             return ''

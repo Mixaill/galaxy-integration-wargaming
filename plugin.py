@@ -272,7 +272,11 @@ class WargamingPlugin(Plugin):
             else:
                 logging.error('plugin/get_os_compatibility: unknown platform %s' % platform)
 
-        return result
+        # TODO:
+        # WGC Upstream Issue: macOS version does not support command line arguments like --instal
+        # So for this moment we should disable macOS and looking for reimplementation of 
+        # installation initialization procedure inside plugin
+        return OSCompatibility.Windows
 
     #
     # ImportUserPresence
