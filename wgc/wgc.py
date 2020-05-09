@@ -14,16 +14,25 @@ from .wgc_constants import FALLBACK_COUNTRY, FALLBACK_LANGUAGE, WGCInstallDocs
 from .wgc_error import MetadataNotFoundError
 from .wgc_gamerestrictions import WGCGameRestrictions
 from .wgc_helper import DETACHED_PROCESS
+from .wgc_http import WgcHttp
 from .wgc_location import WGCLocation
 from .wgc_xmpp import WgcXMPP
 
 class WGC():
     def __init__(self):
-        self._api = WGCApi(self.get_tracking_id(), self.get_country_code(), self.get_wgc_language())
+        self.__http = WgcHttp()
+        self._api = WGCApi(self.__http, self.get_tracking_id(), self.get_country_code(), self.get_wgc_language())
         pass
 
     async def shutdown(self):
         await self._api.shutdown()
+        await self.__http.shutdown()
+
+
+    #HTTP Client
+    def get_http_client(self) -> WgcHttp:
+        return self.__http
+
 
     #Auth Server
     def auth_server_uri(self) -> str:
