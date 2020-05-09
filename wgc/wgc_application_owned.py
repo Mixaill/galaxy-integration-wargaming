@@ -8,11 +8,12 @@ from typing import Dict
 from .wgc_helper import DETACHED_PROCESS, fixup_gamename
 from .wgc_location import WGCLocation
 
-class WGCOwnedApplicationInstance(object):
-    def __init__(self, app_data, instance_data, is_purchased):
+class WGCOwnedApplicationInstance():
+    def __init__(self, app_data, instance_data, is_purchased, api):
         self._name = app_data['game_name']
         self._data = instance_data
         self.__is_purchased = is_purchased
+        self.__api = api
 
     def get_application_id(self):
         return self._data['application_id']
@@ -49,16 +50,24 @@ class WGCOwnedApplicationInstance(object):
         subprocess.Popen([WGCLocation.get_wgc_exe_path(), '--install', '-g', self.get_application_install_url(), '--skipJobCheck'], creationflags=DETACHED_PROCESS)
         return True
 
+    def get_metadata(self) -> str:
+        '''
+        downloads metadata
+        '''
+        return self.__api.fetch_app_metadata(self.get_update_service_url(), self.get_application_id())
+
+
 
 class WGCOwnedApplication():
 
-    def __init__(self, data, is_purchased):
+    def __init__(self, data, is_purchased, api):
         self.__data = data
         self.__is_purchased = is_purchased
+        self.__api = api
 
         self._instances = dict()
         for instance_json in self.__data['instances']:
-            instance_obj = WGCOwnedApplicationInstance(self.__data, instance_json, is_purchased)
+            instance_obj = WGCOwnedApplicationInstance(self.__data, instance_json, is_purchased, self.__api)
             self._instances[instance_obj.get_application_id()] = instance_obj
 
     def is_application_purchased(self) -> bool:

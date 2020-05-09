@@ -104,7 +104,7 @@ class WGC():
             
             try:
                 app = WGCLocalApplication(app_dir)
-                apps[app.GetId()] = app
+                apps[app.get_app_id()] = app
             except MetadataNotFoundError:
                 logging.warning('WGC/get_local_applications: Failed to found game metadata from folder %s. ' % app_dir)
             except Exception:

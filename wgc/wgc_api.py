@@ -28,6 +28,8 @@ class WgcApi:
     
     WGUSCS_SHOWROOM = '/api/v16/content/showroom/'
 
+    WGUS_METADATA = '/api/v1/metadata'
+
 
     def __init__(self, http : WgcHttp, wgni : WgcWgni, country_code : str = '', language_code : str = 'en'):
         self.__logger = logging.getLogger('wgc_api')
@@ -37,12 +39,6 @@ class WgcApi:
 
         self._country_code = country_code
         self._language_code = language_code
-
-        self.__server = None
-
-        self.__login_info = None
-        self.__login_info_temp = None
-
 
     async def shutdown(self):
         pass
@@ -83,12 +79,11 @@ class WgcApi:
 
             if app_gameid in GAMES_F2P or app_gameid in purchased_gameids:
                 is_purchased = app_gameid in purchased_gameids and app_gameid not in GAMES_F2P
-                product_list.append(WGCOwnedApplication(product, is_purchased))
+                product_list.append(WGCOwnedApplication(product, is_purchased, self))
             else:
                 self.__logger.warning('fetch_product_list: unknown ID %s' % app_gameid)
 
         return product_list
-
 
     async def __wgcps_fetch_product_list(self):
         response = await self.__http.request_post_simple(
@@ -148,3 +143,17 @@ class WgcApi:
             return None
 
         return json.loads(showroom_response.text)
+
+    #
+    # Metadata download
+    # 
+
+    async def fetch_app_metadata(self, update_server: str, app_id: str) -> str:
+        url = '%s/%s/?guid=%s&chain_id=unknown&protocol_version=6.4' % (update_server, self.WGUS_METADATA, app_id)
+        
+        response = await self.__http.request_get(url) 
+        if response.status != 200:
+            self.__logger.error('fetch_app_metadata: error on retrieving showroom data: (%s, %s)' % (url, response.text))
+            return None
+
+        return response.text
