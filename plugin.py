@@ -107,6 +107,9 @@ class WargamingPlugin(Plugin):
     #
 
     async def authenticate(self, stored_credentials = None):
+        authserver = self._wgc.get_auth_server()
+        wgni = self._wgc.get_wgni_client()
+
         if not stored_credentials:
             logging.info('plugin/authenticate: no stored credentials')
 
@@ -114,32 +117,36 @@ class WargamingPlugin(Plugin):
                 "window_title": "Login to Wargaming",
                 "window_width": 640,
                 "window_height": 460,
-                "start_uri": self._wgc.auth_server_uri(),
+                "start_uri": authserver.get_uri(),
                 "end_uri_regex": '.*finished'
             }
-            if not await self._wgc.auth_server_start():
+            if not await authserver.start():
                 raise BackendError()
 
             return NextStep("web_session", AUTH_PARAMS)
 
         else:
-            auth_passed = await self._wgc.login_info_set(stored_credentials)
+            auth_passed = await wgni.login_info_set(stored_credentials)
             if not auth_passed:
                 logging.warning('plugin/authenticate: stored credentials are invalid')
                 raise InvalidCredentials()
             
-            return Authentication(self._wgc.account_id(), '%s_%s' % (self._wgc.account_realm(), self._wgc.account_nickname()))
+            return Authentication(wgni.get_account_id(), '%s_%s' % (wgni.get_account_realm(), wgni.get_account_nickname()))
+
 
     async def pass_login_credentials(self, step, credentials, cookies):
-        await self._wgc.auth_server_stop()
+        authserver = self._wgc.get_auth_server()
+        wgni = self._wgc.get_wgni_client()
 
-        login_info = self._wgc.login_info_get()
+        await authserver.shutdown()
+
+        login_info = wgni.login_info_get()
         if not login_info:
             logging.error('plugin/authenticate: login info is None!')
             raise InvalidCredentials()
 
         self.store_credentials(login_info)
-        return Authentication(self._wgc.account_id(), '%s_%s' % (self._wgc.account_realm(), self._wgc.account_nickname()))
+        return Authentication(wgni.get_account_id(), '%s_%s' % (wgni.get_account_realm(), wgni.get_account_nickname()))
 
     #
     # ImportOwnedGames
@@ -148,7 +155,8 @@ class WargamingPlugin(Plugin):
     async def get_owned_games(self) -> List[Game]:     
         owned_applications = list()
 
-        for instance in (await self._wgc.get_owned_applications(self._wgc.account_realm())).values():
+        wgni = self._wgc.get_wgni_client()
+        for instance in (await self._wgc.get_owned_applications(wgni.get_account_realm())).values():
             license_info = LicenseInfo(LicenseType.SinglePurchase if instance.is_application_purchased() else LicenseType.FreeToPlay, None)
             owned_applications.append(Game(instance.get_application_id(), instance.get_application_fullname(), None, license_info))
 
@@ -185,7 +193,8 @@ class WargamingPlugin(Plugin):
             webbrowser.open(self._wgc.get_wgc_install_url())
             return
 
-        instances = await self._wgc.get_owned_applications(self._wgc.account_realm())
+        wgni = self._wgc.get_wgni_client()
+        instances = await self._wgc.get_owned_applications(wgni.get_account_realm())
         if game_id not in instances:
             logging.warning('plugin/install_games: failed to find the application with id %s' % game_id)
             raise BackendError()

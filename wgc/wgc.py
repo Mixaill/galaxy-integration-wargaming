@@ -7,7 +7,8 @@ import subprocess
 from typing import Dict
 import xml.etree.ElementTree as ElementTree
 
-from .wgc_api import WGCApi
+from .wgc_api import WgcApi
+from .wgc_authserver import WgcAuthorizationServer
 from .wgc_application_local import WGCLocalApplication
 from .wgc_application_owned import WGCOwnedApplication, WGCOwnedApplicationInstance
 from .wgc_constants import FALLBACK_COUNTRY, FALLBACK_LANGUAGE, WGCInstallDocs
@@ -16,16 +17,21 @@ from .wgc_gamerestrictions import WGCGameRestrictions
 from .wgc_helper import DETACHED_PROCESS
 from .wgc_http import WgcHttp
 from .wgc_location import WGCLocation
+from .wgc_wgni import WgcWgni
 from .wgc_xmpp import WgcXMPP
 
 class WGC():
     def __init__(self):
         self.__http = WgcHttp()
-        self._api = WGCApi(self.__http, self.get_tracking_id(), self.get_country_code(), self.get_wgc_language())
+        self.__wgni = WgcWgni(self.__http, self.get_tracking_id())
+        self.__authserver = WgcAuthorizationServer(self.__wgni)
+        self.__api = WgcApi(self.__http, self.__wgni, self.get_country_code(), self.get_wgc_language())
         pass
 
     async def shutdown(self):
-        await self._api.shutdown()
+        await self.__api.shutdown()
+        await self.__authserver.shutdown()
+        await self.__wgni.shutdown()
         await self.__http.shutdown()
 
 
@@ -34,37 +40,20 @@ class WGC():
         return self.__http
 
 
+    #WGNI Client
+    def get_wgni_client(self) -> WgcWgni:
+        return self.__wgni
+
+
     #Auth Server
-    def auth_server_uri(self) -> str:
-        return self._api.auth_server_uri()
-
-    async def auth_server_start(self) -> bool:
-        return await self._api.auth_server_start()
-
-    async def auth_server_stop(self) -> bool:
-        return await self._api.auth_server_stop()
+    def get_auth_server(self) -> WgcAuthorizationServer:
+        return self.__authserver
 
 
-    #Login info
-    def login_info_get(self) -> Dict[str,str]:
-        return self._api.login_info_get()
+    #API Client
+    def get_api_client(self) -> WgcApi:
+        return self.__api
 
-    def login_info_set(self, login_info: Dict[str,str]) -> bool:
-        return self._api.login_info_set(login_info)
-
-
-    #Account details
-    def account_id(self) -> int:
-        return self._api.get_account_id()
-
-    def account_email(self) -> str:
-        return self._api.get_account_email()
-
-    def account_nickname(self) -> str:
-        return self._api.get_account_nickname()
-
-    def account_realm(self) -> str:
-        return self._api.get_account_realm()
 
     # Settings
 
@@ -125,7 +114,7 @@ class WGC():
 
     async def get_owned_applications(self, target_realm: str = None) -> Dict[str, WGCOwnedApplicationInstance]:
         applications_instances = dict()
-        for application in await self._api.fetch_product_list():
+        for application in await self.get_api_client().fetch_product_list():
             for key, application_instance in application.get_application_instances().items():
 
                 #skip if realm is not match our target
@@ -144,7 +133,7 @@ class WGC():
         return WGCLocation.is_wgc_installed()
 
     def get_wgc_install_url(self) -> str:
-        return WGCInstallDocs[self.account_realm()]
+        return WGCInstallDocs[self.get_wgni_client().get_account_realm()]
  
     def launch_client(self, minimized: bool) -> None:
         if self.is_wgc_installed():
@@ -166,17 +155,17 @@ class WGC():
     
     async def get_xmpp_client(self, game) -> WgcXMPP :
 
-        realm = self._api.get_account_realm()
+        realm = self.get_wgni_client().get_account_realm()
         if realm is None:
             logging.error('wgc/get_xmpp_wot: failed to get realm')
             return None
 
-        account_id = self._api.get_account_id()
+        account_id = self.get_wgni_client().get_account_id()
         if account_id is None:
             logging.error('wgc/get_xmpp_wot: failed to get account_id')
             return None
 
-        token1 = await self._api.create_token1('xmppcs')
+        token1 = await self.get_wgni_client().create_token1('xmppcs')
         if token1 is None:
             logging.error('wgc/get_xmpp_wot: failed to get token1')
 

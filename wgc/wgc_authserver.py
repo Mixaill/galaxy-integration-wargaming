@@ -1,3 +1,4 @@
+import asyncio
 import os
 import logging
 
@@ -6,16 +7,20 @@ import aiohttp.web
 
 from .wgc_constants import WGCAuthorizationResult
 
-class WGCAuthorizationServer():
+class WgcAuthorizationServer():
+    LOCALSERVER_HOST = '127.0.0.1'
+    LOCALSERVER_PORT = 13337
 
     def __init__(self, backend):
+        self.__logger = logging.getLogger('wgc_authserver')
+
         self.__backend = backend
         self.__app = aiohttp.web.Application()
 
         self.__runner = None
         self.__site = None
+        self.__task = None
 
-        self.__logger = logging.getLogger('wgc_authserver')
 
         self.__app.add_routes([
             aiohttp.web.get ('/login'                , self.handle_login_get                    ),
@@ -29,15 +34,42 @@ class WGCAuthorizationServer():
             aiohttp.web.post('/2fa'     , self.handle_2fa_post    ),
         ])
     
-    async def start(self, host, port):
+    #
+    # Info
+    #
+
+    def get_uri(self) -> str:
+        return 'http://%s:%s/login' % (self.LOCALSERVER_HOST, self.LOCALSERVER_PORT)
+
+    #
+    # Start/Stop
+    #
+
+    async def start(self) -> bool:
+
+        if self.__task is not None:
+            self.__logger.warning('auth_server_start: auth server object is already exists')
+            return False
+
+        self.__task = asyncio.create_task(self.__worker(self.LOCALSERVER_HOST, self.LOCALSERVER_PORT))
+        return True
+
+
+    async def shutdown(self):    
+        if self.__runner is not None:
+            await self.__runner.cleanup()
+
+
+    async def __worker(self, host, port):
         self.__runner = aiohttp.web.AppRunner(self.__app)
         await self.__runner.setup()
     
         self.__site = aiohttp.web.TCPSite(self.__runner, host, port)
         await self.__site.start()    
 
-    async def shutdown(self):    
-        await self.__runner.cleanup()
+    #
+    # Handlers
+    #
 
     async def handle_login_get(self, request):
         return aiohttp.web.FileResponse(os.path.join(os.path.dirname(os.path.realpath(__file__)),'html/login.html'))
@@ -78,7 +110,6 @@ class WGCAuthorizationServer():
 
         self.__process_auth_result(auth_result)
 
-
     async def handle_2fa_post(self, request):
         data = await request.post()
 
@@ -88,7 +119,6 @@ class WGCAuthorizationServer():
             auth_result = await self.__backend.do_auth_2fa(data['authcode'], use_backup_code)
 
         self.__process_auth_result(auth_result)
-
 
     def __process_auth_result(self, auth_result):
         if auth_result == WGCAuthorizationResult.FINISHED:
