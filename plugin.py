@@ -53,7 +53,7 @@ import webbrowser
 
 from galaxyutils.time_tracker import TimeTracker, GameNotTrackedException, GamesStillBeingTrackedException
 
-from wgc import WGC, WGCLocalApplication, PAPIWoT, WgcXMPP, get_profile_url
+from wgc import WGC, WgcLauncher, WGCLocalApplication, PAPIWoT, WgcXMPP, get_profile_url
 
 class WargamingPlugin(Plugin):
     """
@@ -213,7 +213,7 @@ class WargamingPlugin(Plugin):
     #
 
     async def launch_platform_client(self) -> None:
-        self._wgc.launch_client(True)
+        WgcLauncher.launch_wgc(True)
 
     #
     # ImportFriends
@@ -281,11 +281,7 @@ class WargamingPlugin(Plugin):
             else:
                 logging.error('plugin/get_os_compatibility: unknown platform %s' % platform)
 
-        # TODO:
-        # WGC Upstream Issue: macOS version does not support command line arguments like --instal
-        # So for this moment we should disable macOS and looking for reimplementation of 
-        # installation initialization procedure inside plugin
-        return OSCompatibility.Windows
+        return result
 
     #
     # ImportUserPresence

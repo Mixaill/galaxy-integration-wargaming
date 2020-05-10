@@ -13,6 +13,7 @@ from typing import Dict
 from .wgc_apptype import WgcAppType
 from .wgc_gameinfo import WgcGameInfo
 from .wgc_helper import DETACHED_PROCESS, fixup_gamename, get_platform
+from .wgc_launcher import WgcLauncher
 from .wgc_location import WGCLocation
 from .wgc_metadata import WgcMetadata
 from .wgc_preferences import WgcPreferences
@@ -47,6 +48,12 @@ class WGCOwnedApplicationInstance():
     def get_application_install_url(self):
         return '%s@%s' % (self.get_application_id(), self.get_update_service_url())
 
+    async def get_metadata(self) -> str:
+        '''
+        downloads metadata
+        '''
+        return await self.__api.fetch_app_metadata(self.get_update_service_url(), self.get_application_id())
+
     def get_update_service_url(self):
         return self._data['update_service_url']
 
@@ -61,20 +68,16 @@ class WGCOwnedApplicationInstance():
         if get_platform() == 'macos':
             return await self.install_application_macos()
         elif get_platform() == 'windows':
-            return await self.install_application_windows()
+            return WgcLauncher.launch_wgc_gameinstall(self.get_application_install_url())
         else:
             self.__logger.error('install_application: unsupported platform %s' % get_platform())
             return False
 
     async def install_application_macos(self) -> bool:
-        if not WGCLocation.is_wgc_installed():
-            self.__logger.warning('install_application: failed to install %s because WGC is not installed' % self.get_application_id())
-            return False
-
         preferences = WgcPreferences(WGCLocation.get_wgc_preferences_file())
         
         #create dirs
-        dir_game = os.path.join(preferences.get_default_install_path(), self.get_application_name().replace(' ', '_'))
+        dir_game = WGCLocation.fixup_path(os.path.join(preferences.get_default_install_path(), self.get_application_fullname().replace(' ', '_').replace('(','').replace(')','')))
         if os.path.exists(dir_game):
             dir_game = '%s_%s' % (dir_game.rstrip('\\/'), ''.join(random.choices(string.digits+'ABCDEF', k=8)))
 
@@ -102,19 +105,13 @@ class WGCOwnedApplicationInstance():
         WgcGameInfo.create_file(file_gameinfo, self, metadata, apptype, language_to_install)
 
         #register game directory
-        preferences.register_app_dir(dir_game)
+        preferences.register_app_dir(WGCLocation.fixdown_path(dir_game))
+        preferences.set_active_game(WGCLocation.fixdown_path(dir_game))
+        preferences.set_current_game(WGCLocation.fixdown_path(dir_game))
+        preferences.save()
 
-
-    async def install_application_windows(self) -> bool:
-        subprocess.Popen([WGCLocation.get_wgc_exe_path(), '--install', '-g', self.get_application_install_url(), '--skipJobCheck'], creationflags=DETACHED_PROCESS)
-        return True
-
-    async def get_metadata(self) -> str:
-        '''
-        downloads metadata
-        '''
-        return await self.__api.fetch_app_metadata(self.get_update_service_url(), self.get_application_id())
-
+        #run WGC
+        WgcLauncher.launch_wgc()
 
 
 class WGCOwnedApplication():

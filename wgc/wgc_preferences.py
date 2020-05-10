@@ -15,6 +15,8 @@ class WgcPreferences:
     WGC preferences.xml file
     '''
 
+    FALLBACK_DEFAULT_INSTALL_PATH = 'C:/Games/'
+
     def __init__(self, filepath: str):
         self.__logger = logging.getLogger('wgc_preferences')
 
@@ -25,18 +27,16 @@ class WgcPreferences:
         self.__root = ElementTree.parse(filepath).getroot()
 
 
-    def register_app_dir(self, app_dir) -> bool:
+    def register_app_dir(self, app_dir):
         games = self.__root.find('application/games_manager/games')
         if games is None:
+            self.__logger.error('register_app_dir: failed to games section')
             return False
 
         game = ElementTree.SubElement(games, 'game')
 
         workdir = ElementTree.SubElement(game, 'working_dir')
         workdir.text = app_dir
-
-        self.save()
-        return True
 
     def get_wgc_language(self) -> str:
         result = self.__root.find('application/localization_manager/current_localization').text
@@ -52,9 +52,37 @@ class WgcPreferences:
 
         return result
 
-
     def get_default_install_path(self) -> str:
-        return self.__root.find('application/games_manager/default_install_path').text
+        result = self.__root.find('application/games_manager/default_install_path')
+        
+        #fallback to C:\Games\
+        if result is None:
+            return self.FALLBACK_DEFAULT_INSTALL_PATH
+        
+        return result.text
+
+    def set_active_game(self, path: str):
+        gm = self.__root.find('application/games_manager')
+        if not gm:
+            self.__logger.error('set_active_game: failed to find game manager')
+
+        #protocol/application/games_manager/active_game
+        active_game = gm.find('active_game')
+        if not active_game:
+            active_game = ElementTree.SubElement(gm, 'active_game')
+        active_game.text = path
+
+
+    def set_current_game(self, path: str):
+        gm = self.__root.find('application/games_manager')
+        if not gm:
+            self.__logger.error('set_current_game: failed to find game manager')
+
+        #protocol/application/games_manager/current_game
+        current_game = gm.find('current_game')
+        if not current_game:
+            current_game = ElementTree.SubElement(gm, 'current_game')
+        current_game.text = path
 
 
     def save(self) -> str:

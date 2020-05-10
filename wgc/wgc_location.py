@@ -6,111 +6,152 @@ import os
 from pathlib import Path
 from typing import List
 
-from .wgc_helper import scantree
+from .wgc_helper import scantree, get_platform
 
-class WGCLocation():
+class WGCLocation():    
+    MACOS_EXECUTABLE     = '/Applications/Wargaming.net Game Center.app/Contents/MacOS/Wargaming.net Game Center'
+    WINE_DRIVE_C         = os.path.join(Path.home(), 'Library/Application Support/Wargaming.net Game Center/Bottles/wargaminggamecenter64/drive_c/')
     
-    WGC_PROGRAMDATA_DIR = 'Wargaming.net/GameCenter/'
+    FALLBACK_DIR_PROGRAMDATA = 'C:/ProgramData/'
+    FALLBACK_DIR_WGC         = 'C:/Program Files (x86)/Wargaming.net/GameCenter/'
 
-    WGC_APPSLOCATION_DIR = 'apps/'
-    WGC_PATH_FILE = 'data/wgc_path.dat'
-    WGC_TRACKING_FILE = 'data/wgc_tracking_id.dat'
+    WGC_PROGRAMDATA = 'Wargaming.net/GameCenter/'
+    WGC_PROGRAMDATA_APPS = 'apps/'
+    WGC_PROGRAMDATA_WGCPATH = 'data/wgc_path.dat'
+    WGC_PROGRAMDATA_WGCTRACKING = 'data/wgc_tracking_id.dat'
 
-    WGC_PREFERENCES_FILE = 'preferences.xml'  
-    WGC_EXECUTABLE_NAME = 'wgc.exe'
-    WGC_GAMES_RESTRICTIONS = 'games_restrictions.xml'
+    WGC_WGCDIR_EXECUTABLE = 'wgc.exe'
+    WGC_WGCDIR_GAMESRESTRICTIONS = 'games_restrictions.xml'
+    WGC_WGCDIR_PREFERENCES = 'preferences.xml'  
 
-    WGC_MACOS_PROGRAMDATA_DIR = os.path.join(Path.home(), 'Library/Application Support/Wargaming.net Game Center/Bottles/wargaminggamecenter64/drive_c/ProgramData/Wargaming.net/GameCenter/')
-    WGC_MACOS_WGC_DIR         = os.path.join(Path.home(), 'Library/Application Support/Wargaming.net Game Center/Bottles/wargaminggamecenter64/drive_c/Program Files (x86)/Wargaming.net/GameCenter/')
+    @staticmethod 
+    def fixup_path(fspath: str) -> str:
+        '''
+        converts Wine path to macOS path
+        '''
+        if get_platform() == "macos":
+            return fspath.replace('\\','/').replace('C:/', WGCLocation.WINE_DRIVE_C)
 
+        return fspath
+
+    @staticmethod 
+    def fixdown_path(fspath: str) -> str:
+        '''
+        converts macOS path to Wine path
+        '''
+        if get_platform() == "macos":
+            return fspath.replace('\\','/').replace(WGCLocation.WINE_DRIVE_C,'C:/')
+
+        return fspath
 
     @staticmethod
     def get_wgc_programdata_dir() -> str:
-        #Windows
-        if os.getenv('PROGRAMDATA'):
-            return os.path.join(os.getenv('PROGRAMDATA'), WGCLocation.WGC_PROGRAMDATA_DIR)
+        #get from env
+        programdata = os.getenv('PROGRAMDATA')
 
-        #macOS
-        if os.path.exists(WGCLocation.WGC_MACOS_PROGRAMDATA_DIR):
-            return WGCLocation.WGC_MACOS_PROGRAMDATA_DIR
+        #fallback
+        if not programdata:
+            programdata = WGCLocation.fixup_path(WGCLocation.FALLBACK_DIR_PROGRAMDATA)
 
-        logging.getLogger('WGC/Location').warn('get_wgc_programdata_dir: WGC ProgramData directory was not found')
-        return ''
+        #check %PROGRAMDATA%
+        if not os.path.exists(programdata):
+            logging.getLogger('wgc_location').error('get_wgc_programdata_dir: failed to find programdata (%s)' % programdata)
+            return ''
+
+        #check WGC directory
+        programdata_wgc = os.path.join(programdata, WGCLocation.WGC_PROGRAMDATA)
+        if not os.path.exists(programdata_wgc):
+            logging.getLogger('wgc_location').warning('get_wgc_programdata_dir: failed to find wgc programdata directory (%s)' % programdata_wgc)
+            return ''
+
+        return programdata_wgc
 
     @staticmethod
     def get_wgc_wgcpath_file() -> str:
-        return os.path.join(WGCLocation.get_wgc_programdata_dir(), WGCLocation.WGC_PATH_FILE)
+        return os.path.join(WGCLocation.get_wgc_programdata_dir(), WGCLocation.WGC_PROGRAMDATA_WGCPATH)
 
     @staticmethod
     def get_wgc_trackingid_file() -> str:
-        return os.path.join(WGCLocation.get_wgc_programdata_dir(), WGCLocation.WGC_TRACKING_FILE)
+        return os.path.join(WGCLocation.get_wgc_programdata_dir(), WGCLocation.WGC_PROGRAMDATA_WGCTRACKING)
 
     @staticmethod
     def get_wgc_apps_dir() -> str:
-        return os.path.join(WGCLocation.get_wgc_programdata_dir(), WGCLocation.WGC_APPSLOCATION_DIR)
+        return os.path.join(WGCLocation.get_wgc_programdata_dir(), WGCLocation.WGC_PROGRAMDATA_APPS)
 
     @staticmethod
-    def get_wgc_dir() -> str: 
+    def get_wgc_dir() -> str:
+        wgc_dir = ''
+
         #try to use path from wgc_path.data
-        wgc_path_file = WGCLocation.get_wgc_wgcpath_file()
-        if os.path.exists(wgc_path_file):
-            wgc_path = None
-            with open(wgc_path_file, 'r') as file_content:
-                wgc_path = file_content.read()
-            if os.path.exists(os.path.join(wgc_path, WGCLocation.WGC_EXECUTABLE_NAME)):
-                return wgc_path
+        WGC_PROGRAMDATA_WGCPATH = WGCLocation.get_wgc_wgcpath_file()
+        if os.path.exists(WGC_PROGRAMDATA_WGCPATH):
+            with open(WGC_PROGRAMDATA_WGCPATH, 'r') as file_content:
+                wgc_dir = WGCLocation.fixup_path(file_content.read())
+
+            if os.path.exists(os.path.join(wgc_dir, WGCLocation.WGC_WGCDIR_EXECUTABLE)):
+                return wgc_dir
 
         #fall back to program data
-        wgc_programdata_dir = WGCLocation.get_wgc_programdata_dir()
-        if os.path.exists(os.path.join(wgc_programdata_dir, WGCLocation.WGC_EXECUTABLE_NAME)):
-            return wgc_programdata_dir
+        wgc_dir = WGCLocation.fixup_path(WGCLocation.get_wgc_programdata_dir())
+        if os.path.exists(os.path.join(wgc_dir, WGCLocation.WGC_WGCDIR_EXECUTABLE)):
+            return wgc_dir
 
-        #fall back to macos path
-        if os.path.exists(WGCLocation.WGC_MACOS_WGC_DIR):
-            return WGCLocation.WGC_MACOS_WGC_DIR
+        #fall back to program files
+        wgc_dir = WGCLocation.fixup_path(WGCLocation.FALLBACK_DIR_WGC)
+        if os.path.exists(os.path.join(wgc_dir, WGCLocation.WGC_WGCDIR_EXECUTABLE)):
+            return wgc_dir
 
-        return None       
+        logging.getLogger('wgc_location').warning('get_wgc_dir: failed to find wgc directory')
+        return wgc_dir       
 
     @staticmethod
     def get_wgc_exe_path() -> str:
         '''
-        returns path to the wgc.exe file
+        returns path to the wgc executable
         '''
-        wgc_dir = WGCLocation.get_wgc_dir()
-        if wgc_dir is None:
-            return None
+        result = os.path.join(WGCLocation.get_wgc_dir(), WGCLocation.WGC_WGCDIR_EXECUTABLE) 
+        if not os.path.exists(result):
+            logging.getLogger('wgc_location').warning('get_wgc_exe_path: failed to find wgc executable')
+            return ''
 
-        return os.path.join(wgc_dir, WGCLocation.WGC_EXECUTABLE_NAME)
+        return result
+
+    @staticmethod
+    def get_wgc_exe_macos_path() -> str:
+        '''
+        returns path to the wgc macos launcher binary
+        '''
+        if get_platform() != 'macos':
+            logging.getLogger('wgc_location').error('get_wgc_exe_macos_path: requires macOS')
+            return ''
     
+        return WGCLocation.MACOS_EXECUTABLE
+
     @staticmethod
     def get_wgc_preferences_file() -> str:
         '''
         returns path to the preferences.xml file
         '''
-        wgc_dir = WGCLocation.get_wgc_dir()
-        if wgc_dir is None:
-            return None
-
-        preferences_path = os.path.join(wgc_dir, WGCLocation.WGC_PREFERENCES_FILE)
-        if not os.path.exists(preferences_path):
-            return None
         
-        return preferences_path
+        result = os.path.join(WGCLocation.get_wgc_dir(), WGCLocation.WGC_WGCDIR_PREFERENCES)
+        if not os.path.exists(result):
+            logging.getLogger('wgc_location').warning('get_wgc_preferences_file: failed to find wgc preferences.xml')
+            return ''
+        
+        return result
 
     @staticmethod
     def get_wgc_gamerestrictions_file() -> str:
         '''
         returns path to the games_restrictions.xml file
         '''
-        wgc_dir = WGCLocation.get_wgc_dir();
-        if not wgc_dir:
+
+        result = os.path.join(WGCLocation.get_wgc_dir(), WGCLocation.WGC_WGCDIR_GAMESRESTRICTIONS)
+        if not os.path.exists(result):
+            logging.getLogger('wgc_location').info('get_wgc_gamerestrictions_file: failed to find wgc game_restrictions.xml')
             return ''
 
-        gamerestrictions_path = os.path.join(wgc_dir, WGCLocation.WGC_GAMES_RESTRICTIONS)
-        if not os.path.exists(gamerestrictions_path):
-            return ''
-
-        return gamerestrictions_path
+        return result
 
     @staticmethod
     def get_apps_dirs() -> List[str]:
@@ -125,10 +166,10 @@ class WGCLocation():
             app_path = None
             with open(app_file, 'r', encoding="utf-8") as file_content:
                 app_path = file_content.read()
-                apps.append(app_path)
+                apps.append(WGCLocation.fixup_path(app_path))
 
         return apps
 
     @staticmethod
     def is_wgc_installed() -> bool:
-        return WGCLocation.get_wgc_dir() != None
+        return WGCLocation.get_wgc_dir()

@@ -113,12 +113,6 @@ class WGC():
     def get_wgc_install_url(self) -> str:
         return WGCInstallDocs[self.get_wgni_client().get_account_realm()]
  
-    def launch_client(self, minimized: bool) -> None:
-        if self.is_wgc_installed():
-            subprocess.Popen([WGCLocation.get_wgc_exe_path(), '--background' if minimized else ''], creationflags=DETACHED_PROCESS)
-        else:
-            logging.warning('WGC/launch_client: WGC is not installed')
-
     # Game Restrictions
 
     def get_game_restrictions(self) -> WGCGameRestrictions:
