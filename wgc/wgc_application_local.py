@@ -17,7 +17,7 @@ from .wgc_metadata import WgcMetadata
 class WGCLocalApplication():
     
     INFO_FILE = 'game_info.xml'
-    METADATA_FILE = 'game_metadata\\metadata.xml'
+    METADATA_FILE = 'game_metadata/metadata.xml'
     WGCAPI_FILE = 'wgc_api.exe'
 
     def __init__(self, folder):
