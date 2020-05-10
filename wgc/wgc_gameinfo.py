@@ -6,7 +6,8 @@ import xml.etree.ElementTree as ElementTree
 from xml.dom import minidom
 from typing import List
 
-from .wgc_application_owned import WGCOwnedApplicationInstance
+#from .wgc_application_owned import WGCOwnedApplicationInstance
+from .wgc_apptype import WgcAppType
 from .wgc_error import MetadataNotFoundError
 from .wgc_metadata import WgcMetadata
 
@@ -16,7 +17,7 @@ class WgcGameInfo:
     '''
 
     @staticmethod 
-    def create_file(filepath: str, metadata: WgcMetadata, instance: WGCOwnedApplicationInstance, localization: str, client_type: str):
+    def create_file(filepath: str, app_instance, metadata: WgcMetadata, apptype: WgcAppType, localization: str):
         '''
         creates a new game_info.xml file
         '''
@@ -26,7 +27,7 @@ class WgcGameInfo:
         
         #protocol/game/id
         protocol_game_id = ElementTree.SubElement(protocol_game, 'id')
-        protocol_game_id.text = metadata.get_application_id()
+        protocol_game_id.text = metadata.get_app_id()
         
         #protocol/game/index
         protocol_game_idx = ElementTree.SubElement(protocol_game, 'index')
@@ -50,7 +51,7 @@ class WgcGameInfo:
 
         #protocol/game/client_type
         protocol_game_clienttype = ElementTree.SubElement(protocol_game, 'client_type')
-        protocol_game_clienttype.text = client_type
+        protocol_game_clienttype.text = apptype.get_apptype()
 
         #protocol/game/show_guide
         protocol_game_showguide = ElementTree.SubElement(protocol_game, 'show_guide')
@@ -59,22 +60,22 @@ class WgcGameInfo:
         #protocol/game/update_urls
         protocol_game_updateurls = ElementTree.SubElement(protocol_game, 'update_urls')
         protocol_game_updateurls_val = ElementTree.SubElement(protocol_game_updateurls, 'value')
-        protocol_game_updateurls_val.text = instance.get_update_service_url()
+        protocol_game_updateurls_val.text = app_instance.get_update_service_url()
 
         #protocol/game/corrupt_parts
         ElementTree.SubElement(protocol_game, 'corrupt_parts')
 
         #protocol/game/parts_versions
         protocol_game_partsversions = ElementTree.SubElement(protocol_game, 'part_versions')
-        for part_id in metadata.get_parts_ids():
+        for part_id in metadata.get_parts_ids(apptype.get_apptype()):
             ElementTree.SubElement(protocol_game_partsversions, 'version', {'name': part_id, 'available': '', 'installed': '0'})
 
         #protocol/game/parameters
         protocol_game_parameters = ElementTree.SubElement(protocol_game, 'parameters')
         protocol_game_parameters_desktop = ElementTree.SubElement(protocol_game_parameters, 'value', {'name': 'create_desktop_shortcut'})
-        protocol_game_parameters_desktop.text = True
+        protocol_game_parameters_desktop.text = 'true'
         protocol_game_parameters_menu = ElementTree.SubElement(protocol_game_parameters, 'value', {'name': 'create_start_menu_shortcut'})
-        protocol_game_parameters_menu.text = True   
+        protocol_game_parameters_menu.text = 'true'
     
         #protocol/game/dlc
         ElementTree.SubElement(protocol_game, 'dlc')

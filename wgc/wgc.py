@@ -17,6 +17,7 @@ from .wgc_gamerestrictions import WGCGameRestrictions
 from .wgc_helper import DETACHED_PROCESS
 from .wgc_http import WgcHttp
 from .wgc_location import WGCLocation
+from .wgc_preferences import WgcPreferences
 from .wgc_wgni import WgcWgni
 from .wgc_xmpp import WgcXMPP
 
@@ -25,8 +26,10 @@ class WGC():
         self.__http = WgcHttp()
         self.__wgni = WgcWgni(self.__http, self.get_tracking_id())
         self.__authserver = WgcAuthorizationServer(self.__wgni)
-        self.__api = WgcApi(self.__http, self.__wgni, self.get_country_code(), self.get_wgc_language())
-        pass
+
+        preferences = WgcPreferences(WGCLocation.get_wgc_preferences_file())
+        self.__api = WgcApi(self.__http, self.__wgni, preferences.get_country_code(), preferences.get_wgc_language())
+
 
     async def shutdown(self):
         await self.__api.shutdown()
@@ -55,32 +58,7 @@ class WGC():
         return self.__api
 
 
-    # Settings
-
-    def __get_preferences_value(self, node_name: str) -> str:
-        wgc_preferences_file = WGCLocation.get_wgc_preferences_file()
-        if wgc_preferences_file is not None:
-            xml_file = ElementTree.parse(wgc_preferences_file).getroot()
-            return xml_file.find(node_name).text
-
-        return ''
-
-    def get_wgc_language(self) -> str:
-        result = self.__get_preferences_value('application/localization_manager/current_localization')
-        if result == '':
-            result = FALLBACK_LANGUAGE
-
-        return result
-
-    def get_country_code(self) -> str:
-        result = self.__get_preferences_value('application/user_location_country_code')
-        if result == '':
-            result = FALLBACK_COUNTRY
-
-        return result
-
     # Tracking
-
     def get_tracking_id(self) -> str:
         tracking_id = ''
 

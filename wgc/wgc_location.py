@@ -6,7 +6,6 @@ import os
 from pathlib import Path
 from typing import List
 
-
 from .wgc_helper import scantree
 
 class WGCLocation():

@@ -199,7 +199,7 @@ class WargamingPlugin(Plugin):
             logging.warning('plugin/install_games: failed to find the application with id %s' % game_id)
             raise BackendError()
         
-        instances[game_id].install_application()
+        await instances[game_id].install_application()
 
     #
     # UninstallGame

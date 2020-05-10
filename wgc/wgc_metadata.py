@@ -107,5 +107,40 @@ class WgcMetadata:
 
         return result
 
-    def get_parts_ids(self) -> List[str]:
-        pass
+    def get_client_types(self) -> List[str]:
+        result = list()
+
+        client_types = self.__root.find('predefined_section/client_types')
+        for client_type in client_types:
+            result.append(client_type.attrib['id'])
+
+        return result
+
+
+    def get_default_client_type(self) -> str:
+        client_types = self.__root.find('predefined_section/client_types')
+        return client_types.attrib['default']
+
+
+    def get_parts_ids(self, client_type_id: str) -> List[str]:
+        result = list()
+
+        client_types = self.__root.find('predefined_section/client_types')
+        for client_type in client_types:
+            if client_type.attrib['id'] != client_type_id:
+                continue
+            
+            client_parts = client_type.find('client_parts')
+            for client_part in client_parts:
+                result.append(client_part.attrib['id'])
+
+        return result
+
+
+    def get_languages(self) -> List[str]:
+        languages = self.__root.find('predefined_section/supported_languages').text
+        return languages.split(',')
+
+    def get_default_language(self) -> str:
+        return self.__root.find('predefined_section/default_language').text
+

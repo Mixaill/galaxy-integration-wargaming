@@ -4,8 +4,21 @@
 import ctypes
 import logging
 import os
+import platform
 
 from .wgc_constants import USER_PROFILE_URLS
+
+### Platform
+def get_platform() -> str:
+    system = platform.system()
+    if system == 'Windows':
+        return 'windows'
+
+    if system == 'Darwin':
+        return 'macos'
+
+    logging.error('get_platform: unknown platform %s' % system)
+    return 'unknown'
 
 ### Process
 DETACHED_PROCESS = 0x00000008
