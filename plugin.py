@@ -47,7 +47,6 @@ from galaxy.api.consts import OSCompatibility, Platform, PresenceState
 from galaxy.api.errors import BackendError, InvalidCredentials, UnknownError
 from galaxy.api.plugin import Plugin, create_and_run_plugin
 from galaxy.api.types import Authentication, Game, GameTime, LicenseInfo, LicenseType, LocalGame, LocalGameState, NextStep, UserInfo, UserPresence
-import galaxy.proc_tools as proc_tools
 
 import webbrowser
 
@@ -181,7 +180,7 @@ class WargamingPlugin(Plugin):
     #
 
     async def launch_game(self, game_id: str) -> None:
-        self.__local_applications[game_id].RunExecutable(self.__platform)
+        self.__local_applications[game_id].run_application(self.__platform)
         self.__change_game_status(game_id, LocalGameState.Installed | LocalGameState.Running, True)
 
     #
@@ -206,7 +205,7 @@ class WargamingPlugin(Plugin):
     #
 
     async def uninstall_game(self, game_id: str) -> None:
-        self.__local_applications[game_id].UninstallGame()
+        self.__local_applications[game_id].uninstall_application()
 
     #
     # LaunchPlatformClient
@@ -356,19 +355,6 @@ class WargamingPlugin(Plugin):
         self.__rescan_games(True)
         await asyncio.sleep(self.SLEEP_CHECK_INSTANCES)
 
-
-    def __is_game_running(self, app: WGCLocalApplication) -> bool:
-        for game_path in app.GetExecutablePaths():
-            for pid in proc_tools.pids():
-                proc_path = proc_tools.get_process_info(pid).binary_path
-                if proc_path is None or proc_path == '':
-                    continue
-                if proc_path.lower().replace('\\','/') == game_path.lower().replace('\\','/'):
-                    return True
-
-        return False
-
-
     def __rescan_games(self, notify = False):
         self.__local_applications = self._wgc.get_local_applications()
 
@@ -380,7 +366,7 @@ class WargamingPlugin(Plugin):
         #change status of installed games
         for game_id, game in self.__local_applications.items():
             new_state = LocalGameState.None_
-            if self.__is_game_running(game):
+            if game.is_running():
                 new_state = LocalGameState.Installed | LocalGameState.Running
             elif game.IsInstalled():
                 new_state = LocalGameState.Installed

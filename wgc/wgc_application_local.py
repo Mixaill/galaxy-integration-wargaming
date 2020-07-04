@@ -5,13 +5,16 @@ import logging
 import os
 import subprocess
 import xml.etree.ElementTree as ElementTree
-
 from typing import Dict, List
+
+import psutil
 
 from .wgc_constants import ADDITIONAL_EXECUTABLE_NAMES
 from .wgc_error import MetadataNotFoundError
 from .wgc_gameinfo import WgcGameInfo
-from .wgc_helper import DETACHED_PROCESS, is_mutex_exists
+from .wgc_helper import DETACHED_PROCESS, file_copy
+from .wgc_launcher import WgcLauncher
+from .wgc_location import WGCLocation
 from .wgc_metadata import WgcMetadata
 
 class WGCLocalApplication():
@@ -78,11 +81,54 @@ class WGCLocalApplication():
 
         return result
 
-    def GetWgcapiPath(self) -> str:
+    def get_application_wgcapi_path(self) -> str:
+        '''
+        returns path to the application's instance of wgc_api.exe
+        '''
         return os.path.join(self.GetGameFolder(), self.WGCAPI_FILE)
 
-    def RunExecutable(self, platform) -> None:
-        subprocess.Popen([self.GetExecutablePath(platform)], creationflags=DETACHED_PROCESS)
+    def is_running(self) -> bool:
+        '''
+        check if current local application is running
+        '''
+        app_pathes = list()
+        proc_pathes = list()
+        cmdline_pathes = list()
 
-    def UninstallGame(self) -> None:
-        subprocess.Popen([self.GetWgcapiPath(), '--uninstall'], creationflags=DETACHED_PROCESS, cwd = self.GetGameFolder())
+        #populate app pathes
+        for app_path in self.GetExecutablePaths():
+            if app_path is None or app_path == '':
+                continue
+            app_pathes.append(app_path.lower().replace('\\','/'))
+
+        #populate proc pathes
+        for proc in psutil.process_iter(['exe', 'cmdline']):
+            proc_exe = proc.info['exe']
+            proc_cmdline = proc.info['cmdline']
+
+            #process exe
+            if not proc_exe:
+                continue
+            proc_pathes.append(proc_exe.lower().replace('\\','/'))
+
+            #process cmdline
+            if proc_cmdline and len(proc_cmdline) > 1 and proc_cmdline[0] == 'winewrapper.exe':
+                cmdline_pathes.extend([i.lower().replace('\\','/') for i in proc_cmdline])
+
+        #check pathes
+        for app_path in app_pathes:
+            if app_path in proc_pathes:
+                return True
+            if app_path in cmdline_pathes:
+                return True
+
+        return False
+
+    def run_application(self, platform) -> bool:
+        return WgcLauncher.launch_app(self.GetExecutablePath(platform))
+
+    def uninstall_application(self) -> bool:
+        #update wgcapi
+        file_copy(WGCLocation.get_wgc_wgcapi_path(), self.get_application_wgcapi_path())
+
+        return WgcLauncher.launch_app(self.get_application_wgcapi_path(), ['--uninstall'])
