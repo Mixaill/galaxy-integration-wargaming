@@ -4,6 +4,7 @@
 import logging
 import os
 import platform
+import shutil
 
 from .wgc_constants import USER_PROFILE_URLS
 
@@ -31,6 +32,12 @@ def scantree(path):
             yield from scantree(entry.path)
         else:
             yield entry
+
+def file_copy(path_source: str, path_destination):
+    '''
+    copy file with overwrite
+    '''
+    shutil.copyfile(path_source, path_destination)
 
 ### Names
 
