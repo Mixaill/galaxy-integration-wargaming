@@ -70,12 +70,12 @@ class WargamingPlugin(Plugin):
       * ImportGameTime
       * ImportOSCompatibility
       * ImportUserPresence
+      * ImportLocalSize
 
     Missing features:
       * ImportAchievements
       * ShutdownPlatformClient
       * ImportGameLibrarySettings
-      * ImportLocalSize
       * ImportSubscriptions
       * ImportSubscriptionGames
     """
@@ -301,6 +301,26 @@ class WargamingPlugin(Plugin):
             raise UnknownError('plugin/get_user_presence: failed to get info for user %s' % user_id)
 
         return context[user_id]
+
+    #
+    # ImportLocalSize
+    #
+
+    async def prepare_local_size_context(self, game_ids: List[str]) -> Any:
+        ctx = dict()
+
+        for game_id in game_ids:
+            if game_id in self.__local_applications:
+                ctx[game_id] = self.__local_applications[game_id].get_app_size()
+
+        return ctx
+
+
+    async def get_local_size(self, game_id: str, context: Any) -> Optional[int]:   
+        if game_id in context:
+            return context[game_id]
+
+        return None
 
     #
     # Other

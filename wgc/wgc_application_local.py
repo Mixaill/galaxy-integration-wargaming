@@ -21,6 +21,7 @@ class WGCLocalApplication():
     WGCAPI_FILE = 'wgc_api.exe'
 
     def __init__(self, folder):
+        self.__logger = logging.getLogger('wgc_application_local')
         self.__folder = folder
 
         self.__gameinfo = WgcGameInfo(os.path.join(self.__folder, self.INFO_FILE))
@@ -28,6 +29,19 @@ class WGCLocalApplication():
 
     def get_app_id(self) -> str:
         return self.__metadata.get_app_id()
+
+    def get_app_size(self) -> int:
+        total_size = 0
+        try:
+            for dirpath, _, filenames in os.walk(self.__folder):
+                for f in filenames:
+                    fp = os.path.join(dirpath, f)
+                    if not os.path.islink(fp):
+                        total_size += os.path.getsize(fp)
+        except Exception:
+            self.__logger.exception('get_app_size:')
+
+        return total_size
 
     def GetGameId(self) -> str:
         instance_id = self.get_app_id()
@@ -40,7 +54,7 @@ class WGCLocalApplication():
     def GetOsCompatibility(self) -> List[str]:
         executables = self.__metadata.get_executable_names()
         if executables is None:
-            logging.warning('WGCLocalApplication/GetOsCompatibility: None object')
+            self.__logger.warning('GetOsCompatibility: None object')
 
         return executables.keys()
 
