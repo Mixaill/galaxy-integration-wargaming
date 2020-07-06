@@ -310,7 +310,7 @@ class WargamingPlugin(Plugin):
 
         for game_id in game_ids:
             if game_id in self.__local_applications:
-                ctx[game_id] = self.__local_applications[game_id].get_app_size()
+                ctx[game_id] = await self.__local_applications[game_id].get_app_size()
 
         return ctx
 

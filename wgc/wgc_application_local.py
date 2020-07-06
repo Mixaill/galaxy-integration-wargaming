@@ -1,6 +1,7 @@
 # (c) 2019-2020 Mikhail Paulyshka
 # SPDX-License-Identifier: MIT
 
+import asyncio
 import logging
 import os
 import subprocess
@@ -33,11 +34,12 @@ class WGCLocalApplication():
     def get_app_id(self) -> str:
         return self.__metadata.get_app_id()
 
-    def get_app_size(self) -> int:
+    async def get_app_size(self) -> int:
         total_size = 0
         try:
             for dirpath, _, filenames in os.walk(self.__folder):
                 for f in filenames:
+                    await asyncio.sleep(0)
                     fp = os.path.join(dirpath, f)
                     if not os.path.islink(fp):
                         total_size += os.path.getsize(fp)
