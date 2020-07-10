@@ -149,7 +149,7 @@ class WgcWgni:
             data = { 'fields' : 'nickname' })
         
         if response.status != 200:
-            self.__logger.error('__request_account_info: error on retrieving account info: %s' % response.text)
+            self.__logger.error('__request_account_info: error on retrieving account info: %s, %s' % (response.status, response.text))
             return None
 
         return json.loads(response.text)
