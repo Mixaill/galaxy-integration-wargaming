@@ -170,20 +170,6 @@ class KeccakState(object):
             r = r << 8 | b
         return r
 
-    @staticmethod
-    def bytes2str(bl: list) -> bytes:
-        """
-        Converts a sequence of byte values to a string.
-        """
-        return bytes(bl)
-
-    @staticmethod
-    def str2bytes(bs: bytes) -> list:
-        """
-        Converts a string to a sequence of byte values.
-        """
-        return list(bs)
-
     def __init__(self, bitrate, b):
         self.bitrate = bitrate
         self.b = b
@@ -261,7 +247,7 @@ class KeccakSponge(object):
         self.permfn(self.state)
 
     def absorb(self, bs: bytes):
-        self.buffer += KeccakState.str2bytes(bs)
+        self.buffer += list(bs)
 
         while len(self.buffer) >= self.state.bitrate_bytes:
             self.absorb_block(self.buffer[:self.state.bitrate_bytes])
@@ -318,7 +304,7 @@ class KeccakHash(object):
         finalised = self.sponge.copy()
         finalised.absorb_final()
         digest = finalised.squeeze(self.digest_size)
-        return KeccakState.bytes2str(digest)
+        return bytes(digest)
 
     def hexdigest(self):
         return hexlify(self.digest())
