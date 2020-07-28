@@ -478,7 +478,8 @@ class WargamingPlugin(Plugin):
             except GamesStillBeingTrackedException:
                 pass
         else:
-            logging.error('plugin/__gametime_save_cache: gametime tracker is not initialized')
+            #it is possible situation in case when we shutdown plugin before finishing handshake
+            pass
 
         if gametime_cache:
             self.persistent_cache["gametime_cache"] = gametime_cache
