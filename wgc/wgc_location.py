@@ -105,7 +105,7 @@ class WGCLocation():
             return wgc_dir
 
         logging.getLogger('wgc_location').warning('get_wgc_dir: failed to find wgc directory')
-        return wgc_dir       
+        return ''       
 
     @staticmethod
     def get_wgc_exe_path() -> str:

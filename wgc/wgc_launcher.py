@@ -13,10 +13,12 @@ class WgcLauncher:
     #
     # WGC Launch
     #
+
     @staticmethod
     def launch_wgc(minimized: bool = False) -> bool:
         if not WGCLocation.is_wgc_installed():
             logging.getLogger('wgc_launcher').warning('launch_wgc: WGC is not installed')
+            return False
         
         if get_platform() == "macos":
             return WgcLauncher.__launch_wgc_macos(minimized)
@@ -45,8 +47,9 @@ class WgcLauncher:
 
     @staticmethod
     def launch_wgc_gameinstall(install_uri: str) -> bool:
+        #macOS processing performed in WGCOwnedApplicationInstance::install_application()
         if get_platform() == "macos":
-           logging.getLogger('wgc_launcher').error('launch_wgc_gameinstall: unsupported on macos')
+           logging.getLogger('wgc_launcher').error('launch_wgc_gameinstall: unsupported on macos') 
            return False
 
         return WgcLauncher.__launch_wgc_gameinstall_windows(install_uri)
@@ -58,6 +61,7 @@ class WgcLauncher:
 
     #
     # WGC Application Run
+    #
 
     @staticmethod
     def launch_app(executable_path: str, executable_arguments: Optional[List[str]] = None) -> bool:
