@@ -12,6 +12,8 @@ class WGCAuthorizationResult(Enum):
     INVALID_LOGINPASS = 5
     ACCOUNT_NOT_FOUND = 6
     INCORRECT_2FA_BACKUP = 7
+    BANNED = 8
+    INPROGRESS = 9
 
 WGCInstallDocs = {
     'RU'   : 'https://worldoftanks.ru/ru/wgc/',

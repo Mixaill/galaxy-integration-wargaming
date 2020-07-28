@@ -6,7 +6,7 @@ import json
 import logging
 import random
 import string
-from typing import Dict
+from typing import Dict, Tuple
 
 from .wgc_constants import WGCAuthorizationResult, WGCRealms
 from .wgc_http import WgcHttp
@@ -166,10 +166,14 @@ class WgcWgni:
 
         self.__login_info_temp = {'realm': realm, 'email': email, 'password': password}
 
-        challenge_data = await self.__oauth_challenge_get(realm)
-        if not challenge_data:
-            self.__logger.error('do_auth_emailpass: failed to get challenge')
-            return WGCAuthorizationResult.FAILED
+        #request challenge
+        (challenge_status, challenge_data) = await self.__oauth_challenge_get(realm)
+        if challenge_status == WGCAuthorizationResult.BANNED:
+            self.__logger.warning('do_auth_emailpass: failed to get challenge because of ban')
+            return challenge_status
+        elif challenge_status != WGCAuthorizationResult.INPROGRESS:
+            self.__logger.error('do_auth_emailpass: failed to get challenge, %s' % challenge_data)
+            return challenge_status
 
         #calculate proof of work
         pow_number = self.__oauth_challenge_calculate(challenge_data)
@@ -301,16 +305,19 @@ class WgcWgni:
             return None
 
 
-    async def __oauth_challenge_get(self, realm):
+    async def __oauth_challenge_get(self, realm) -> Tuple[WGCAuthorizationResult, ]:
         '''
         request authentication challenge and return proof-of-work
         '''
         r = await self.__http.request_get_simple('wgnet', realm, self.OUATH_URL_CHALLENGE)
+        if r.status == 409:
+            self.__logger.warning('__oauth_challenge_get: error %s, content: %s' % (r.status, r.text))
+            return (WGCAuthorizationResult.BANNED, r.text)
         if r.status != 200:
             self.__logger.error('__oauth_challenge_get: error %s, content: %s' % (r.status, r.text))
-            return None
+            return (WGCAuthorizationResult.FAILED, r.text)
 
-        return json.loads(r.text)['pow']
+        return (WGCAuthorizationResult.INPROGRESS, json.loads(r.text)['pow'])
 
 
     def __oauth_challenge_calculate(self, challenge_data):

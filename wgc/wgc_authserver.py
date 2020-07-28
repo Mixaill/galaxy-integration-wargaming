@@ -29,7 +29,8 @@ class WgcAuthorizationServer():
             aiohttp.web.get ('/2fa_failed'           , self.handle_2fa_failed_get               ),
             aiohttp.web.get ('/finished'             , self.handle_finished_get                 ),
             aiohttp.web.get ('/unsupported_platform' , self.handle_unsupported_platform_get     ),
-            
+            aiohttp.web.get ('/banned'               , self.handle_banned_get                   ),
+
             aiohttp.web.post('/login'   , self.handle_login_post  ),   
             aiohttp.web.post('/2fa'     , self.handle_2fa_post    ),
         ])
@@ -89,6 +90,9 @@ class WgcAuthorizationServer():
     async def handle_finished_get(self, request):
         return aiohttp.web.FileResponse(os.path.join(os.path.dirname(os.path.realpath(__file__)),'html/finished.html'))
 
+    async def handle_banned_get(self, request):
+        return aiohttp.web.FileResponse(os.path.join(os.path.dirname(os.path.realpath(__file__)),'html/banned.html'))
+
     async def handle_login_post(self, request):
         data = await request.post()
         auth_result = WGCAuthorizationResult.FAILED
@@ -127,5 +131,7 @@ class WgcAuthorizationServer():
             raise aiohttp.web.HTTPFound('/2fa')
         elif auth_result == WGCAuthorizationResult.INCORRECT_2FA or auth_result == WGCAuthorizationResult.INCORRECT_2FA_BACKUP: 
             raise aiohttp.web.HTTPFound('/2fa_failed')
+        elif auth_result == WGCAuthorizationResult.BANNED: 
+            raise aiohttp.web.HTTPFound('/banned')
         else:
             raise aiohttp.web.HTTPFound('/login_failed')
