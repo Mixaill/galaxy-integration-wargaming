@@ -1,7 +1,7 @@
 aiohttp == 3.6.2
 certifi == 2020.6.20
-galaxy.plugin.api == 0.66
+galaxy.plugin.api == 0.67.0
 galaxyutils == 0.1.5
 psutil == 5.7.2
-sentry_sdk == 0.16.2
+sentry_sdk == 0.18.0
 slixmpp == 1.5.2
