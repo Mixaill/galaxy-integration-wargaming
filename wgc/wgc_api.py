@@ -26,7 +26,7 @@ class WgcApi:
     WGCPS_FETCH_PRODUCT_INFO = '/platform/api/v1/fetchProductList'
     WGCPS_LOGINSESSION = '/auth/api/v1/loginSession'
     
-    WGUSCS_SHOWROOM = '/api/v16/content/showroom/'
+    WGUSCS_SHOWROOM = '/api/v17/content/showroom/'
 
     WGUS_METADATA = '/api/v1/metadata'
 
