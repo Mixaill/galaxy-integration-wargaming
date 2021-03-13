@@ -40,7 +40,7 @@ logging.getLogger("urllib3").propagate = False
 #Start sentry
 import sentry_sdk
 sentry_sdk.init(
-    "https://d39c903218d54f3ebe3724d54b6edc1c@sentry.friends-of-friends-of-galaxy.org/2",
+    "https://35009a54bd184d25b227e2f26ae96dd7@sentry.friends-of-friends-of-galaxy.org/2",
     release=("galaxy-integration-wargaming@%s" % manifest['version']))
 
 from galaxy.api.consts import OSCompatibility, Platform, PresenceState
