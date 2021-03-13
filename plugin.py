@@ -85,6 +85,7 @@ class WargamingPlugin(Plugin):
     def __init__(self, reader, writer, token):
         super().__init__(Platform(manifest['platform']), manifest['version'], reader, writer, token)
 
+        self._logger = logging.getLogger('wgc_plugin')
         self._wgc = WGC()
         self._xmpp = dict()
 
@@ -110,7 +111,7 @@ class WargamingPlugin(Plugin):
         wgni = self._wgc.get_wgni_client()
 
         if not stored_credentials:
-            logging.info('plugin/authenticate: no stored credentials')
+            self._logger.info('plugin/authenticate: no stored credentials')
 
             AUTH_PARAMS = {
                 "window_title": "Login to Wargaming",
@@ -127,7 +128,7 @@ class WargamingPlugin(Plugin):
         else:
             auth_passed = await wgni.login_info_set(stored_credentials)
             if not auth_passed:
-                logging.warning('plugin/authenticate: stored credentials are invalid')
+                self._logger.warning('plugin/authenticate: stored credentials are invalid')
                 raise InvalidCredentials()
             
             return Authentication(wgni.get_account_id(), '%s_%s' % (wgni.get_account_realm(), wgni.get_account_nickname()))
@@ -141,7 +142,7 @@ class WargamingPlugin(Plugin):
 
         login_info = wgni.login_info_get()
         if not login_info:
-            logging.error('plugin/authenticate: login info is None!')
+            self._logger.error('plugin/authenticate: login info is None!')
             raise InvalidCredentials()
 
         self.store_credentials(login_info)
@@ -181,7 +182,7 @@ class WargamingPlugin(Plugin):
 
     async def launch_game(self, game_id: str) -> None:
         if game_id not in self.__local_applications:
-            logging.warning('plugin/launch_game: failed to run game with id %s' % game_id)
+            self._logger.warning('plugin/launch_game: failed to run game with id %s' % game_id)
             return
 
         self.__local_applications[game_id].run_application(self.__platform)
@@ -199,7 +200,7 @@ class WargamingPlugin(Plugin):
         wgni = self._wgc.get_wgni_client()
         instances = await self._wgc.get_owned_applications(wgni.get_account_realm())
         if game_id not in instances:
-            logging.warning('plugin/install_games: failed to find the application with id %s' % game_id)
+            self._logger.warning('plugin/install_games: failed to find the application with id %s' % game_id)
             raise BackendError()
         
         await instances[game_id].install_application()
@@ -231,7 +232,7 @@ class WargamingPlugin(Plugin):
             profile_url = get_profile_url(xmpp_client.get_game_id(), xmpp_client.get_realm(), user_id)
             friends.append(UserInfo(user_id, user_name, avatar_url, profile_url))
 
-        logging.info('plugin/get_friends: %s' % friends)
+        self._logger.info('plugin/get_friends: %s' % friends)
         return friends
 
     #
@@ -282,7 +283,7 @@ class WargamingPlugin(Plugin):
             elif platform == 'linux':
                 result = OSCompatibility.Linux if result is None else result | OSCompatibility.Linux
             else:
-                logging.error('plugin/get_os_compatibility: unknown platform %s' % platform)
+                self._logger.error('plugin/get_os_compatibility: unknown platform %s' % platform)
 
         return result
 
@@ -451,7 +452,7 @@ class WargamingPlugin(Plugin):
         elif xmpp_presence == 'offline':
             presence_state = PresenceState.Offline
         else:
-            logging.error('plugin/__xmpp_get_gog_presence: unknown presence state %s' % xmpp_presence)
+            self._logger.error('plugin/__xmpp_get_gog_presence: unknown presence state %s' % xmpp_presence)
 
         return UserPresence(
             presence_state = presence_state,
