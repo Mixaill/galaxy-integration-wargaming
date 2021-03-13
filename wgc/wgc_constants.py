@@ -22,6 +22,13 @@ WGCInstallDocs = {
     'ASIA' : 'https://worldoftanks.asia/en/wgc/',
 }
 
+WGCIds  = {
+    'RU'   : 'WGC.RU.PRODUCTION',
+    'EU'   : 'WGC.EU.PRODUCTION',
+    'NA'   : 'WGC.NA.PRODUCTION',
+    'ASIA' : 'WGC.ASIA.PRODUCTION',
+}
+
 WGCRealms = { 
     'RU'   : {'domain_wgnet': 'ru.wargaming.net'  , 'domain_wgcps' : 'wgcps-ru.wargaming.net'  , 'domain_wguscs' : 'wguscs-wgcru.wargaming.net', 'client_id': '77cxLwtEJ9uvlcm2sYe4O8viIIWn1FEWlooMTTqF'},
     'EU'   : {'domain_wgnet': 'eu.wargaming.net'  , 'domain_wgcps' : 'wgcps-eu.wargaming.net'  , 'domain_wguscs' : 'wguscs-wgcru.wargaming.net', 'client_id': 'JJ5yuABVKqZekaktUR8cejMzxbbHAtUVmY2eamsS'},

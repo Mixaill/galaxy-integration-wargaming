@@ -17,7 +17,7 @@ from urllib.parse import parse_qs
 import asyncio
 
 from .wgc_application_owned import WGCOwnedApplication
-from .wgc_constants import WGCAuthorizationResult, WGCRealms, GAMES_F2P
+from .wgc_constants import WGCIds, WGCAuthorizationResult, WGCRealms, GAMES_F2P
 from .wgc_http import WgcHttp
 from .wgc_wgni import WgcWgni
 
@@ -26,10 +26,11 @@ class WgcApi:
     WGCPS_FETCH_PRODUCT_INFO = '/platform/api/v1/fetchProductList'
     WGCPS_LOGINSESSION = '/auth/api/v1/loginSession'
     
-    WGUSCS_SHOWROOM = '/api/v17/content/showroom/'
-
+    WGUSCS_SHOWROOM = '/api/v18/content/showroom/'
+    
     WGUS_METADATA = '/api/v1/metadata'
-
+    
+    WGC_PUBLISHER_ID = 'wargaming'
 
     def __init__(self, http : WgcHttp, wgni : WgcWgni, country_code : str = '', language_code : str = 'en'):
         self.__logger = logging.getLogger('wgc_api')
@@ -132,7 +133,9 @@ class WgcApi:
 
         url = self.__http.get_url('wguscs', self.__wgni.get_account_realm(), self.WGUSCS_SHOWROOM)
         url = url + '?lang=%s' % self._language_code.upper()
-        url = url + '&gameid=WGC.RU.PRODUCTION&format=json'
+        url = url + '&gameid=%s' % WGCIds[self.__wgni.get_account_realm()]
+        url = url + '&wgc_publisher_id=%s' % WgcApi.WGC_PUBLISHER_ID
+        url = url + '&format=json'
         url = url + '&country_code=%s' % self._country_code
         url = url + additionals
 
