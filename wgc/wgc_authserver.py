@@ -1,72 +1,37 @@
-import asyncio
-import os
+# (c) 2019-2021 Mikhail Paulyshka
+# SPDX-License-Identifier: MIT
+
 import logging
+import os.path
 
 import aiohttp
-import aiohttp.web
+
+from mglx.mglx_webserver import MglxWebserver
 
 from .wgc_constants import WGCAuthorizationResult
 
-class WgcAuthorizationServer():
-    LOCALSERVER_HOST = '127.0.0.1'
-    LOCALSERVER_PORT = 13337
 
-    def __init__(self, backend):
+class WgcAuthServer(MglxWebserver):
+    def __init__(self, backend = None):
         self.__logger = logging.getLogger('wgc_authserver')
 
+        super(WgcAuthServer, self).__init__()
+
         self.__backend = backend
-        self.__app = aiohttp.web.Application()
 
-        self.__runner = None
-        self.__site = None
-        self.__task = None
-
-
-        self.__app.add_routes([
-            aiohttp.web.get ('/login'                , self.handle_login_get                    ),
-            aiohttp.web.get ('/login_failed'         , self.handle_login_failed_get             ),
-            aiohttp.web.get ('/2fa'                  , self.handle_2fa_get                      ),
-            aiohttp.web.get ('/2fa_failed'           , self.handle_2fa_failed_get               ),
-            aiohttp.web.get ('/finished'             , self.handle_finished_get                 ),
-            aiohttp.web.get ('/unsupported_platform' , self.handle_unsupported_platform_get     ),
-            aiohttp.web.get ('/banned'               , self.handle_banned_get                   ),
-
-            aiohttp.web.post('/login'   , self.handle_login_post  ),   
-            aiohttp.web.post('/2fa'     , self.handle_2fa_post    ),
-        ])
-    
-    #
-    # Info
-    #
-
-    def get_uri(self) -> str:
-        return 'http://%s:%s/login' % (self.LOCALSERVER_HOST, self.LOCALSERVER_PORT)
-
-    #
-    # Start/Stop
-    #
-
-    async def start(self) -> bool:
-
-        if self.__task is not None:
-            self.__logger.warning('auth_server_start: auth server object is already exists')
-            return False
-
-        self.__task = asyncio.create_task(self.__worker(self.LOCALSERVER_HOST, self.LOCALSERVER_PORT))
-        return True
+        self.add_route('GET', '/'                     , self.handle_login_get                    )
+        self.add_route('GET', '/login'                , self.handle_login_get                    )
+        self.add_route('GET', '/login_failed'         , self.handle_login_failed_get             )
+        self.add_route('GET', '/2fa'                  , self.handle_2fa_get                      )
+        self.add_route('GET', '/2fa_failed'           , self.handle_2fa_failed_get               )
+        self.add_route('GET', '/finished'             , self.handle_finished_get                 )
+        self.add_route('GET', '/unsupported_platform' , self.handle_unsupported_platform_get     )
+        self.add_route('GET', '/banned'               , self.handle_banned_get                   )
 
 
-    async def shutdown(self):    
-        if self.__runner is not None:
-            await self.__runner.cleanup()
-
-
-    async def __worker(self, host, port):
-        self.__runner = aiohttp.web.AppRunner(self.__app)
-        await self.__runner.setup()
-    
-        self.__site = aiohttp.web.TCPSite(self.__runner, host, port)
-        await self.__site.start()    
+        self.add_route('POST', '/'     , self.handle_login_post)
+        self.add_route('POST', '/login', self.handle_login_post)
+        self.add_route('POST', '/2fa'  , self.handle_2fa_post)
 
     #
     # Handlers

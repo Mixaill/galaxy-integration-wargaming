@@ -8,7 +8,7 @@ from typing import Dict
 import xml.etree.ElementTree as ElementTree
 
 from .wgc_api import WgcApi
-from .wgc_authserver import WgcAuthorizationServer
+from .wgc_authserver import WgcAuthServer
 from .wgc_application_local import WGCLocalApplication
 from .wgc_application_owned import WGCOwnedApplication, WGCOwnedApplicationInstance
 from .wgc_constants import FALLBACK_COUNTRY, FALLBACK_LANGUAGE, WGCInstallDocs
@@ -25,7 +25,7 @@ class WGC():
     def __init__(self):
         self.__http = WgcHttp()
         self.__wgni = WgcWgni(self.__http, self.get_tracking_id())
-        self.__authserver = WgcAuthorizationServer(self.__wgni)
+        self.__authserver = WgcAuthServer(self.__wgni)
 
         preferences = WgcPreferences(WGCLocation.get_wgc_preferences_file())
         self.__api = WgcApi(self.__http, self.__wgni, preferences.get_country_code(), preferences.get_wgc_language())
@@ -49,7 +49,7 @@ class WGC():
 
 
     #Auth Server
-    def get_auth_server(self) -> WgcAuthorizationServer:
+    def get_auth_server(self) -> WgcAuthServer:
         return self.__authserver
 
 
