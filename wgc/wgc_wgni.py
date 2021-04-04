@@ -148,8 +148,11 @@ class WgcWgni:
             'wgnet', self.__login_info['realm'], self.WGNI_URL_ACCOUNTINFO, 
             data = { 'fields' : 'nickname' })
         
-        if response.status != 200:
-            self.__logger.error('__request_account_info: error on retrieving account info: %s, %s' % (response.status, response.text))
+        if response.status == 502:
+            self.__logger.warning('__request_account_info: error on retrieving account info: %s, %s' % (response.status, response.text), exc_info=True)
+            return None
+        elif response.status != 200:
+            self.__logger.error('__request_account_info: error on retrieving account info: %s, %s' % (response.status, response.text), exc_info=True)
             return None
 
         return json.loads(response.text)
@@ -172,7 +175,7 @@ class WgcWgni:
             self.__logger.warning('do_auth_emailpass: failed to get challenge because of ban')
             return challenge_status
         elif challenge_status != WGCAuthorizationResult.INPROGRESS:
-            self.__logger.error('do_auth_emailpass: failed to get challenge, %s' % challenge_data)
+            self.__logger.error('do_auth_emailpass: failed to get challenge, %s, %s' % (challenge_status, challenge_data))
             return challenge_status
 
         #calculate proof of work
@@ -313,7 +316,10 @@ class WgcWgni:
         if r.status == 409:
             self.__logger.warning('__oauth_challenge_get: error %s, content: %s' % (r.status, r.text))
             return (WGCAuthorizationResult.BANNED, r.text)
-        if r.status != 200:
+        elif r.status == 502:
+            self.__logger.warning('__oauth_challenge_get: error %s, content: %s' % (r.status, r.text))
+            return (WGCAuthorizationResult.FAILED, r.text)
+        elif r.status != 200:
             self.__logger.error('__oauth_challenge_get: error %s, content: %s' % (r.status, r.text))
             return (WGCAuthorizationResult.FAILED, r.text)
 
