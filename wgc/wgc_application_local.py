@@ -42,7 +42,11 @@ class WGCLocalApplication():
                     await asyncio.sleep(0)
                     fp = os.path.join(dirpath, f)
                     if not os.path.islink(fp):
-                        total_size += os.path.getsize(fp)
+                        try:
+                            total_size += os.path.getsize(fp)
+                        except FileNotFoundError:
+                            pass
+
         except Exception:
             self.__logger.exception('get_app_size:')
 
