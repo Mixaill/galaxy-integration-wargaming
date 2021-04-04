@@ -156,7 +156,18 @@ class WargamingPlugin(Plugin):
         owned_applications = list()
 
         wgni = self._wgc.get_wgni_client()
-        for instance in (await self._wgc.get_owned_applications(wgni.get_account_realm())).values():
+        
+        login_info = wgni.login_info_get()
+        if login_info is None:
+            self._logger.error('plugin/get_owned_games: login info is None', exc_info=True)
+            return owned_applications
+
+        realm = wgni.get_account_realm()
+        if realm is None:
+            self._logger.error('plugin/get_owned_games: realm is None', exc_info=True)
+            return owned_applications
+
+        for instance in (await self._wgc.get_owned_applications(realm)).values():
             license_info = LicenseInfo(LicenseType.SinglePurchase if instance.is_application_purchased() else LicenseType.FreeToPlay, None)
             owned_applications.append(Game(instance.get_application_id(), instance.get_application_fullname(), None, license_info))
 

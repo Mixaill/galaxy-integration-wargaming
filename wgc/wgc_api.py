@@ -111,7 +111,7 @@ class WgcApi:
             if 'errors' in response_content and response_content['errors'][0]['code'] == 'platform_error':
                 self.__logger.warning('__wgcps_fetch_product_list: platform error: %s' % response.text)
             else:
-                self.__logger.error('__wgcps_fetch_product_list: error on retrieving account info: %s' % response.text)
+                self.__logger.error('__wgcps_fetch_product_list: error on retrieving account info: %s' % response.text, exc_info=True)
             return None
 
         #load additional adata
