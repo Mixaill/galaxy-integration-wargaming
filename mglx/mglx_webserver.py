@@ -34,12 +34,15 @@ class MglxWebserver():
 
     def add_route(self, request_type, url, handler):
         if request_type == 'GET':
-            return self.__app.add_routes([aiohttp.web.get(url, handler)])
+            return self.__app.router.add_get(url, handler)
         elif request_type == 'POST':
-            return self.__app.add_routes([aiohttp.web.post(url, handler)])
+            return self.__app.router.add_post(url, handler)
         else:
             self._logger('add_route: unknown request_type "%s"' % request_type)
             return None
+
+    def add_route_static(self, prefix, folder):
+        return self.__app.router.add_static(prefix, folder)
 
     #
     # Info

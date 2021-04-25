@@ -19,48 +19,29 @@ class WgcAuthServer(MglxWebserver):
 
         self.__backend = backend
 
-        self.add_route('GET', '/'                     , self.handle_login_get                    )
-        self.add_route('GET', '/login'                , self.handle_login_get                    )
-        self.add_route('GET', '/login_failed'         , self.handle_login_failed_get             )
-        self.add_route('GET', '/2fa'                  , self.handle_2fa_get                      )
-        self.add_route('GET', '/2fa_failed'           , self.handle_2fa_failed_get               )
-        self.add_route('GET', '/finished'             , self.handle_finished_get                 )
-        self.add_route('GET', '/unsupported_platform' , self.handle_unsupported_platform_get     )
-        self.add_route('GET', '/banned'               , self.handle_banned_get                   )
+        self.add_route('GET', '/', self.handle_index_get)
 
-
-        self.add_route('POST', '/'     , self.handle_login_post)
         self.add_route('POST', '/login', self.handle_login_post)
-        self.add_route('POST', '/2fa'  , self.handle_2fa_post)
+        self.add_route('POST', '/twoFactor' , self.handle_2fa_post)
+
+        self.add_route_static('/', os.path.join(os.path.dirname(os.path.realpath(__file__)),'html/'))
 
     #
-    # Handlers
+    # Handlers/GET
     #
 
-    async def handle_login_get(self, request):
-        return aiohttp.web.FileResponse(os.path.join(os.path.dirname(os.path.realpath(__file__)),'html/login.html'))
+    async def handle_index_get(self, request: aiohttp.web_request.Request):
+        return aiohttp.web.FileResponse(os.path.join(os.path.dirname(os.path.realpath(__file__)),'html/index.html'))
 
-    async def handle_unsupported_platform_get(self, request):
-        return aiohttp.web.FileResponse(os.path.join(os.path.dirname(os.path.realpath(__file__)),'html/unsupported_platform.html'))
-
-    async def handle_login_failed_get(self, request):
-        return aiohttp.web.FileResponse(os.path.join(os.path.dirname(os.path.realpath(__file__)),'html/login_failed.html'))
-
-    async def handle_2fa_get(self, request):
-        return aiohttp.web.FileResponse(os.path.join(os.path.dirname(os.path.realpath(__file__)),'html/2fa.html'))
-
-    async def handle_2fa_failed_get(self, request):
-        return aiohttp.web.FileResponse(os.path.join(os.path.dirname(os.path.realpath(__file__)),'html/2fa_failed.html'))
-
-    async def handle_finished_get(self, request):
-        return aiohttp.web.FileResponse(os.path.join(os.path.dirname(os.path.realpath(__file__)),'html/finished.html'))
-
-    async def handle_banned_get(self, request):
-        return aiohttp.web.FileResponse(os.path.join(os.path.dirname(os.path.realpath(__file__)),'html/banned.html'))
+    #
+    # Handlers/POST
+    #
 
     async def handle_login_post(self, request):
         data = await request.post()
         auth_result = WGCAuthorizationResult.FAILED
+
+        logging.info(data)
 
         #check data
         data_valid = True
@@ -81,8 +62,10 @@ class WgcAuthServer(MglxWebserver):
 
     async def handle_2fa_post(self, request):
         data = await request.post()
-
         auth_result = WGCAuthorizationResult.INCORRECT_2FA
+
+        logging.info(data)
+
         if 'authcode' in data and data['authcode']:
             use_backup_code = True if 'use_backup' in data else False
             auth_result = await self.__backend.do_auth_2fa(data['authcode'], use_backup_code)
@@ -91,12 +74,14 @@ class WgcAuthServer(MglxWebserver):
 
     def __process_auth_result(self, auth_result):
         if auth_result == WGCAuthorizationResult.FINISHED:
-            raise aiohttp.web.HTTPFound('/finished')
+            raise aiohttp.web.HTTPFound('/?view=finished')
         elif auth_result == WGCAuthorizationResult.REQUIRES_2FA:
-            raise aiohttp.web.HTTPFound('/2fa')
-        elif auth_result == WGCAuthorizationResult.INCORRECT_2FA or auth_result == WGCAuthorizationResult.INCORRECT_2FA_BACKUP: 
-            raise aiohttp.web.HTTPFound('/2fa_failed')
+            raise aiohttp.web.HTTPFound('/?view=twoFactor')
+        elif auth_result == WGCAuthorizationResult.INCORRECT_2FA:
+            raise aiohttp.web.HTTPFound('/?view=twoFactor&errored=true')
+        elif auth_result == WGCAuthorizationResult.INCORRECT_2FA_BACKUP: 
+            raise aiohttp.web.HTTPFound('/?view=twoFactor&errored=true')
         elif auth_result == WGCAuthorizationResult.BANNED: 
-            raise aiohttp.web.HTTPFound('/banned')
+            raise aiohttp.web.HTTPFound('/?view=banned')
         else:
-            raise aiohttp.web.HTTPFound('/login_failed')
+            raise aiohttp.web.HTTPFound('/?view=login&errored=true')

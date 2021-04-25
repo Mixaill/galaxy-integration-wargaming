@@ -36,6 +36,11 @@ WGCRealms = {
     'ASIA' : {'domain_wgnet': 'asia.wargaming.net', 'domain_wgcps' : 'wgcps-asia.wargaming.net', 'domain_wguscs' : 'wguscs-wgcru.wargaming.net', 'client_id': 'Xe2oDM8Z6A4N70VZIV8RyVLHpvdtVPYNRIIYBklJ'},
 }
 
+PasswordResetLinks = {
+    'RU'   : 'https://ru.wargaming.net/personal/password_reset/',
+    'EU'   : 'https://eu.wargaming.net/personal/password_reset/',
+    'NA'   : 'https://na.wargaming.net/personal/password_reset/',
+}
 
 XMPPRealms = {
     'WOT'  : {
