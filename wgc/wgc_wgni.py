@@ -360,7 +360,7 @@ class WgcWgni:
                 await asyncio.sleep(0)
 
 
-    async def __oauth_token_get_bypassword(self, realm, email, password, pow_number, twofactor_token : str = None, otp_code : str = None, use_backup_code : bool = False):
+    async def __oauth_token_get_bypassword(self, realm, email, password, pow_number, twofactor_token : str = None, otp_code : str = None, use_backup_code : bool = False) -> Dict: 
         body = dict()
         body['username'] = email
         body['password'] = password
@@ -378,7 +378,7 @@ class WgcWgni:
 
         response = await self.__http.request_post_simple('wgnet', realm, self.OAUTH_URL_TOKEN, data = body)
         
-        result = None
+        result = dict()
         try:
             result = json.loads(response.text)
         except Exception:
