@@ -11,7 +11,7 @@ import aiohttp
 import certifi
 
 class MglxHttp:
-    HTTP_DEFAULT_USER_AGENT = 'mglx_http/1.0.1'
+    HTTP_DEFAULT_USER_AGENT = 'mglx_http/1.0.2'
     
     def __init__(self, user_agent = HTTP_DEFAULT_USER_AGENT, verify_ssl = True):
         self.__user_agent = user_agent
@@ -56,7 +56,7 @@ class MglxHttp:
                     else:
                         break
             except aiohttp.ClientConnectionError:
-                self.__logger.warn('request: [%s]%s --> aiohttp.ClientConnectionError' % (method, url))
+                self.__logger.exception('request: [%s]%s --> aiohttp.ClientConnectionError' % (method, url))
                 response_status = 0
                 break
             except asyncio.CancelledError:
