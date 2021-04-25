@@ -40,6 +40,7 @@ PasswordResetLinks = {
     'RU'   : 'https://ru.wargaming.net/personal/password_reset/',
     'EU'   : 'https://eu.wargaming.net/personal/password_reset/',
     'NA'   : 'https://na.wargaming.net/personal/password_reset/',
+    'ASIA' : 'https://asia.wargaming.net/personal/password_reset/',
 }
 
 XMPPRealms = {

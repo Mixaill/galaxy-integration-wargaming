@@ -15,8 +15,8 @@ class WgcHttp(MglxHttp):
 
     HTTP_USER_AGENT = 'wgc/20.01.00.9514'
     
-    def __init__(self):
-        super(WgcHttp, self).__init__(WgcHttp.HTTP_USER_AGENT, True)
+    def __init__(self, verify_ssl = True):
+        super(WgcHttp, self).__init__(WgcHttp.HTTP_USER_AGENT, verify_ssl = verify_ssl)
         self.__logger = logging.getLogger('wgc_http')
 
     #

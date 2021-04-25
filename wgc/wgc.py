@@ -22,9 +22,15 @@ from .wgc_wgni import WgcWgni
 from .wgc_xmpp import WgcXMPP
 
 class WGC():
-    def __init__(self):
-        self.__logger = logging.getLogger('wgc')
-        self.__http = WgcHttp()
+    def __init__(self, config : Dict):
+        self.__logger = logging.getLogger('wgc')    
+
+        #parse config
+        ssl_verify = True
+        if 'ssl_verify' in config:
+            ssl_verify = config['ssl_verify']
+
+        self.__http = WgcHttp(ssl_verify)
         self.__wgni = WgcWgni(self.__http, self.get_tracking_id())
         self.__authserver = WgcAuthServer(self.__wgni)
 

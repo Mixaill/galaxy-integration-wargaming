@@ -29,19 +29,25 @@ if thirdparty not in sys.path and os.path.exists(thirdparty):
     sys.path.insert(0, thirdparty)
 
 #read manifest
-menifest = None
-with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "manifest.json")) as manifest:
-    manifest = json.load(manifest)
+menifest = dict()
+with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "manifest.json")) as manifest_file:
+    manifest = json.load(manifest_file)
+
+#read config
+config = dict()
+with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")) as config_file:
+    config = json.load(config_file)
 
 #disable urllib3 logging
 import urllib3
 logging.getLogger("urllib3").propagate = False
 
 #Start sentry
-import sentry_sdk
-sentry_sdk.init(
-    "https://35009a54bd184d25b227e2f26ae96dd7@sentry.friends-of-friends-of-galaxy.org/2",
-    release=("galaxy-integration-wargaming@%s" % manifest['version']))
+if 'sentry_dsn' in config and len(config['sentry_dsn']):
+    import sentry_sdk
+    sentry_sdk.init(
+        config['sentry_dsn'],
+        release=("galaxy-integration-wargaming@%s" % manifest['version']))
 
 from galaxy.api.consts import OSCompatibility, Platform, PresenceState
 from galaxy.api.errors import BackendError, InvalidCredentials, UnknownError
@@ -86,7 +92,7 @@ class WargamingPlugin(Plugin):
         super().__init__(Platform(manifest['platform']), manifest['version'], reader, writer, token)
 
         self._logger = logging.getLogger('wgc_plugin')
-        self._wgc = WGC()
+        self._wgc = WGC(config)
         self._xmpp = dict()
 
         #intialized flag

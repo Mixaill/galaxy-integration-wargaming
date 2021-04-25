@@ -1,0 +1,4 @@
+{
+    "sentry_dsn": "https://35009a54bd184d25b227e2f26ae96dd7@sentry.friends-of-friends-of-galaxy.org/2",
+    "ssl_verify": true
+}
