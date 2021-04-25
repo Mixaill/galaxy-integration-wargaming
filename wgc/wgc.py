@@ -141,6 +141,7 @@ class WGC():
         token1 = await self.get_wgni_client().create_token1('xmppcs')
         if token1 is None:
             self.__logger.error('wgc/get_xmpp_wot: failed to get token1')
+            return None
 
         return WgcXMPP(game, realm, account_id, token1)
 
