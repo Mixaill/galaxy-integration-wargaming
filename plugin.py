@@ -358,7 +358,7 @@ class WargamingPlugin(Plugin):
 
         #xmpp
         for xmpp_client in self._xmpp.values():
-            xmpp_client.disconnect()
+            await xmpp_client.disconnect()
 
         #time tracker
         self.__gametime_save_cache()
