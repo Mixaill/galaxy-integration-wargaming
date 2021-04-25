@@ -26,6 +26,9 @@ class WgcAuthServer(MglxWebserver):
 
         self.add_route_static('/', os.path.join(os.path.dirname(os.path.realpath(__file__)),'html/'))
 
+    def get_uri(self) -> str:
+        return '%s%s' % (super().get_uri(), '?view=login')
+
     #
     # Handlers/GET
     #
@@ -40,8 +43,6 @@ class WgcAuthServer(MglxWebserver):
     async def handle_login_post(self, request):
         data = await request.post()
         auth_result = WGCAuthorizationResult.FAILED
-
-        logging.info(data)
 
         #check data
         data_valid = True
@@ -63,8 +64,6 @@ class WgcAuthServer(MglxWebserver):
     async def handle_2fa_post(self, request):
         data = await request.post()
         auth_result = WGCAuthorizationResult.INCORRECT_2FA
-
-        logging.info(data)
 
         if 'authcode' in data and data['authcode']:
             use_backup_code = True if 'use_backup' in data else False

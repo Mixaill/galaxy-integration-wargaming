@@ -29,8 +29,9 @@
                     <span class="tooltip">GOG Galaxy does not hold your data. Your login and password will be sent as encrypted data to Wargaming.net servers.</span>
                 </div>
             </header>
+            
             <section class="main-content">
-                <form id="main-form" class="main-form" action="/" method="POST">
+                <form id="main-form" class="main-form" action="/login" method="POST">
                     
                     <fieldset id="loginFieldset" style="display: none;">
                         <legend>Login with your Wargaming.net account below to access your Wargaming.net games and friends from GOG Galaxy.</legend>
@@ -142,16 +143,16 @@
         const fieldSetsObj = {
 
             loginFieldSet: document.querySelector("#loginFieldset"),
-            loginInputs: document.querySelectorAll("#loginFieldset input,select"),
+            loginInputs: document.querySelectorAll("#loginFieldset input, #loginFieldset select"),
 
             loginErrorFieldset: document.querySelector("#loginErrorFieldset"),
-            loginErroredInputs: document.querySelectorAll("#loginErrorFieldset input,select"),
+            loginErroredInputs: document.querySelectorAll("#loginErrorFieldset input, #loginErrorFieldset select"),
 
             twoFactorFieldset: document.querySelector("#twoFactorFieldset"),
-            twoFactorInputs: document.querySelectorAll("#twoFactorFieldset input,select"),
+            twoFactorInputs: document.querySelectorAll("#twoFactorFieldset input"),
 
             twoFactorErrorFieldset: document.querySelector("#twoFactorErrorFieldset"),
-            twoFactorErrorInputs: document.querySelectorAll("#twoFactorErrorFieldset input,select")
+            twoFactorErrorInputs: document.querySelectorAll("#twoFactorErrorFieldset input")
 
         }
 
@@ -169,7 +170,6 @@
             switch (url) {
                 //login
                 case urlParamsObj.login:
-                default:
                     fieldSetsObj.loginFieldSet.style.display = "block";
                     handleEnablingInputs(fieldSetsObj.loginInputs);
                     forgotPasswordButtonElement.style.display = "block";
