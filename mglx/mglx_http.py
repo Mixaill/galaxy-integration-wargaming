@@ -60,8 +60,8 @@ class MglxHttp:
                 response_status = 0
                 break
             except asyncio.CancelledError:
-                self.__logger.exception('request: [%s]%s --> asyncio.CancelledError' % (method, url))
-                response_status = 499 #499 Client Closed Request
+                self.__logger.warning('request: [%s]%s --> asyncio.CancelledError' % (method, url))
+                response_status = 499 #499 Client Closed Request, usually inside async task when shutdown was called
                 break
             except asyncio.TimeoutError:
                 self.__logger.warn('request: [%s]%s --> asyncio.TimeoutError' % (method, url))
