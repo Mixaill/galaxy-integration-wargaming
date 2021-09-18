@@ -286,7 +286,10 @@ class WgcWgni:
 
         #get additinal info from WGNI
         wgni_account_info = await self.__request_account_info()
-        self.__login_info['nickname'] = wgni_account_info['nickname']
+        if wgni_account_info is not None:
+            self.__login_info['nickname'] = wgni_account_info['nickname']
+        else:
+            self.__logger.warning('do_auth_token: __request_account_info returns None')
 
         return WGCAuthorizationResult.FINISHED
 
