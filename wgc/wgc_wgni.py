@@ -383,6 +383,7 @@ class WgcWgni:
             result = json.loads(response.text)
         except Exception:
             self.__logger.exception('__oauth_token_get_bypassword: failed to parse response %s' % response.text)
+            result['status_code'] = 0
             return result
 
         result['status_code'] = response.status
