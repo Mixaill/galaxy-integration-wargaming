@@ -241,13 +241,16 @@ class WargamingPlugin(Plugin):
     #
 
     async def get_friends(self) -> List[UserInfo]:
-        xmpp_client = await self.__xmpp_get_client('WOT')
-
         friends = list()
-        for user_id, user_name in (await xmpp_client.get_friends()).items():
-            avatar_url = 'https://ru.wargaming.net/clans/media/clans/emblems/cl_307/163307/emblem_195x195.png'
-            profile_url = get_profile_url(xmpp_client.get_game_id(), xmpp_client.get_realm(), user_id)
-            friends.append(UserInfo(user_id, user_name, avatar_url, profile_url))
+
+        xmpp_client = await self.__xmpp_get_client('WOT')
+        if xmpp_client is not None:
+            for user_id, user_name in (await xmpp_client.get_friends()).items():
+                avatar_url = 'https://ru.wargaming.net/clans/media/clans/emblems/cl_307/163307/emblem_195x195.png'
+                profile_url = get_profile_url(xmpp_client.get_game_id(), xmpp_client.get_realm(), user_id)
+                friends.append(UserInfo(user_id, user_name, avatar_url, profile_url))
+        else:
+            self._logger.warn('plugin/get_friends: xmpp_client is None')
 
         self._logger.info('plugin/get_friends: %s' % friends)
         return friends
@@ -312,8 +315,11 @@ class WargamingPlugin(Plugin):
         result = dict()
 
         xmpp_client = await self.__xmpp_get_client('WOT')
-        for user_id in user_id_list:
-            result[user_id] = await self.__xmpp_get_gog_presence(xmpp_client.get_presence_userid(user_id))
+        if xmpp_client is not None:
+            for user_id in user_id_list:
+                result[user_id] = await self.__xmpp_get_gog_presence(xmpp_client.get_presence_userid(user_id))
+        else:
+            self._logger.warn('plugin/prepare_user_presence_context: xmpp_client is None')
 
         return result
 
@@ -422,13 +428,17 @@ class WargamingPlugin(Plugin):
     #
 
     async def __xmpp_get_client(self, client_type: str) -> WgcXMPP:
-        if client_type not in self._xmpp:
-            self._xmpp[client_type] = await self._wgc.get_xmpp_client(client_type)
-            self._xmpp[client_type].add_event_handler('got_online', self.__xmpp_on_got_online)
-            self._xmpp[client_type].add_event_handler('got_offline', self.__xmpp_on_got_offline)
-            self._xmpp[client_type].connect()
+        if client_type in self._xmpp:
+            return self._xmpp[client_type]
 
-        return self._xmpp[client_type]
+        xmpp_client = await self._wgc.get_xmpp_client(client_type)
+        if xmpp_client is not None: 
+            xmpp_client.add_event_handler('got_online', self.__xmpp_on_got_online)
+            xmpp_client.add_event_handler('got_offline', self.__xmpp_on_got_offline)
+            xmpp_client.connect()
+            self._xmpp[client_type] = xmpp_client
+
+        return xmpp_client
 
     async def __xmpp_on_got_online(self, presence) -> None:
         xmpp_client = await self.__xmpp_get_client('WOT')
