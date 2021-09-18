@@ -320,13 +320,13 @@ class WgcWgni:
         '''
         r = await self.__http.request_get_simple('wgnet', realm, self.OUATH_URL_CHALLENGE)
         if r.status == 409:
-            self.__logger.warning('__oauth_challenge_get: error=%s, content=%s' % (r.status, r.text))
+            self.__logger.warning('__oauth_challenge_get: error=%s, content=%s' % (r.status, r.text), exc_info=True)
             return (WGCAuthorizationResult.ACCOUNT_BANNED, r.status, r.text)
         elif r.status == 502:
-            self.__logger.warning('__oauth_challenge_get: error=%s, content=%s' % (r.status, r.text))
+            self.__logger.warning('__oauth_challenge_get: error=%s, content=%s' % (r.status, r.text), exc_info=True)
             return (WGCAuthorizationResult.SERVER_ERROR, r.status, r.text)
         elif r.status != 200:
-            self.__logger.error('__oauth_challenge_get: error=%s, content=%s' % (r.status, r.text))
+            self.__logger.error('__oauth_challenge_get: error=%s, content=%s' % (r.status, r.text), exc_info=True)
             return (WGCAuthorizationResult.FAILED, r.status, r.text)
 
         return (WGCAuthorizationResult.INPROGRESS, r.status, json.loads(r.text)['pow'])
