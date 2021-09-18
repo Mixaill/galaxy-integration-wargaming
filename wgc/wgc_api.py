@@ -103,7 +103,7 @@ class WgcApi:
         try:
             response_content = json.loads(response.text)
         except Exception:
-            self.__logger.exception('__wgcps_fetch_product_list: failed for parse json: %s' % response.text)
+            self.__logger.exception('__wgcps_fetch_product_list: failed for parse json: %s, %s' % (response.status, response.text))
             return None
 
         if response.status != 200:
