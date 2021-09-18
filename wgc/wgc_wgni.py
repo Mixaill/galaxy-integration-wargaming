@@ -364,6 +364,8 @@ class WgcWgni:
 
 
     async def __oauth_token_get_bypassword(self, realm, email, password, pow_number, twofactor_token : str = None, otp_code : str = None, use_backup_code : bool = False) -> Dict: 
+        result = dict()
+
         body = dict()
         body['username'] = email
         body['password'] = password
@@ -380,12 +382,16 @@ class WgcWgni:
                 body['otp_code'] = otp_code
 
         response = await self.__http.request_post_simple('wgnet', realm, self.OAUTH_URL_TOKEN, data = body)
-        
-        result = dict()
+                
+        if response.text is None:
+            self.__logger.error('__oauth_token_get_bypassword: response.text is None, satus=%s' % response.status)
+            result['status_code'] = 0
+            return result
+
         try:
             result = json.loads(response.text)
         except Exception:
-            self.__logger.exception('__oauth_token_get_bypassword: failed to parse response %s' % response.text)
+            self.__logger.exception('__oauth_token_get_bypassword: failed to parse response status=%s, text=%s' % (response.status, response.text))
             result['status_code'] = 0
             return result
 
