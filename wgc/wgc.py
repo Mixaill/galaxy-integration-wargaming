@@ -92,6 +92,8 @@ class WGC():
                 apps[app.get_app_id()] = app
             except MetadataNotFoundError:
                 self.__logger.warning('WGC/get_local_applications: Failed to found game metadata from folder %s. ' % app_dir)
+            except PermissionError:
+                self.__logger.warning('WGC/get_local_applications: Failed to get accces to the folder %s. ' % app_dir)
             except Exception:
                 self.__logger.exception('WGC/get_local_applications: Failed to load game metadata from folder %s. ' % app_dir)
 
