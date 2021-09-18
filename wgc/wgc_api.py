@@ -103,15 +103,15 @@ class WgcApi:
         try:
             response_content = json.loads(response.text)
         except Exception:
-            self.__logger.exception('__wgcps_fetch_product_list: failed for parse json: %s, %s' % (response.status, response.text))
+            self.__logger.exception('__wgcps_fetch_product_list: failed for parse json: status=%s, text=%s' % (response.status, response.text))
             return None
 
         if response.status != 200:
             #{"status": "error", "errors": [{"code": "platform_error", "context": {"result_code": "EXCEPTION"}}, {"code": "retry", "context": {"interval": 30}}]}
             if 'errors' in response_content and response_content['errors'][0]['code'] == 'platform_error':
-                self.__logger.warning('__wgcps_fetch_product_list: platform error: %s' % response.text)
+                self.__logger.warning('__wgcps_fetch_product_list: platform error: status=%s, text=%s' % (response.status, response.text))
             else:
-                self.__logger.error('__wgcps_fetch_product_list: error on retrieving account info: %s' % response.text, exc_info=True)
+                self.__logger.error('__wgcps_fetch_product_list: error on retrieving account info: status=%s, text=%s' % (response.status, response.text), exc_info=True)
             return None
 
         #load additional adata
@@ -119,7 +119,7 @@ class WgcApi:
         for product_uri in response_content['data']['product_uris']:
             product_response = await self.__http.request_get(product_uri)
             if product_response.status != 200:
-                self.__logger.error('__wgcps_fetch_product_list: error on retrieving product info: %s' % product_uri)
+                self.__logger.error('__wgcps_fetch_product_list: error on retrieving product info: status=%s, text=%s' % (product_response.status, product_uri))
                 continue
 
             response_content['data']['product_content'].append(json.loads(product_response.text))
