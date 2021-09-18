@@ -447,7 +447,7 @@ class WgcWgni:
 
         #parse data
         if response.status != 200:
-            self.__logger.error('create_token1: error on retrieving token1: %s, %s' % (response.status, response.text))
+            self.__logger.error('create_token1: error on retrieving token1: status=%s, text=%s' % (response.status, response.text))
             return None
 
         content = json.loads(response.text)

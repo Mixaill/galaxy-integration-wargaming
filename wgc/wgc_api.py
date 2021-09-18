@@ -142,7 +142,7 @@ class WgcApi:
         showroom_response = await self.__http.request_get(url)
         
         if showroom_response.status != 200:
-            self.__logger.error('__wguscs_get_showroom: error on retrieving showroom data: %s' % showroom_response.text)
+            self.__logger.error('__wguscs_get_showroom: error on retrieving showroom data: status=%s, text=%s' % (showroom_response.status, showroom_response.text))
             return None
 
         return json.loads(showroom_response.text)
