@@ -110,3 +110,5 @@ venv.bak/
 #macOS
 .DS_Store
 
+
+requirements_compiled.txt

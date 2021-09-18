@@ -22,7 +22,7 @@ class WgcAuthServer(MglxWebserver):
         self.add_route('GET', '/', self.handle_index_get)
 
         self.add_route('POST', '/login', self.handle_login_post)
-        self.add_route('POST', '/twoFactor' , self.handle_2fa_post)
+        self.add_route('POST', '/2fa' , self.handle_2fa_post)
 
         self.add_route_static('/', os.path.join(os.path.dirname(os.path.realpath(__file__)),'html/'))
 
@@ -63,7 +63,7 @@ class WgcAuthServer(MglxWebserver):
 
     async def handle_2fa_post(self, request):
         data = await request.post()
-        auth_result = WGCAuthorizationResult.INCORRECT_2FA
+        auth_result = WGCAuthorizationResult.SFA_INCORRECT_CODE
 
         if 'authcode' in data and data['authcode']:
             use_backup_code = True if 'use_backup' in data else False
@@ -74,13 +74,23 @@ class WgcAuthServer(MglxWebserver):
     def __process_auth_result(self, auth_result):
         if auth_result == WGCAuthorizationResult.FINISHED:
             raise aiohttp.web.HTTPFound('/?view=finished')
-        elif auth_result == WGCAuthorizationResult.REQUIRES_2FA:
-            raise aiohttp.web.HTTPFound('/?view=twoFactor')
-        elif auth_result == WGCAuthorizationResult.INCORRECT_2FA:
-            raise aiohttp.web.HTTPFound('/?view=twoFactor&errored=true')
-        elif auth_result == WGCAuthorizationResult.INCORRECT_2FA_BACKUP: 
-            raise aiohttp.web.HTTPFound('/?view=twoFactor&errored=true')
-        elif auth_result == WGCAuthorizationResult.BANNED: 
-            raise aiohttp.web.HTTPFound('/?view=banned')
+        elif auth_result == WGCAuthorizationResult.SERVER_ERROR: 
+            raise aiohttp.web.HTTPFound('/?view=login&subview=server_error')
+
+        elif auth_result == WGCAuthorizationResult.ACCOUNT_INVALID_LOGIN: 
+            raise aiohttp.web.HTTPFound('/?view=login&subview=invalid_login')
+        elif auth_result == WGCAuthorizationResult.ACCOUNT_INVALID_PASSWORD: 
+            raise aiohttp.web.HTTPFound('/?view=login&subview=invalid_login')
+        elif auth_result == WGCAuthorizationResult.ACCOUNT_BANNED: 
+            raise aiohttp.web.HTTPFound('/?view=login&subview=ban')
+
+
+        elif auth_result == WGCAuthorizationResult.SFA_REQUIRED:
+            raise aiohttp.web.HTTPFound('/?view=2fa')
+        elif auth_result == WGCAuthorizationResult.SFA_INCORRECT_CODE:
+            raise aiohttp.web.HTTPFound('/?view=2fa&subview=error_code')
+        elif auth_result == WGCAuthorizationResult.SFA_INCORRECT_BACKUP: 
+            raise aiohttp.web.HTTPFound('/?view=2fa&subview=error_backup')
+        
         else:
-            raise aiohttp.web.HTTPFound('/?view=login&errored=true')
+            raise aiohttp.web.HTTPFound('/?view=login&subview=error')

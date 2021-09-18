@@ -4,16 +4,21 @@
 from enum import Enum
 
 class WGCAuthorizationResult(Enum):
-    UNKNOWN = 0
-    FAILED = 1
-    FINISHED = 2
-    REQUIRES_2FA = 3
-    INCORRECT_2FA = 4
-    INVALID_LOGINPASS = 5
-    ACCOUNT_NOT_FOUND = 6
-    INCORRECT_2FA_BACKUP = 7
-    BANNED = 8
-    INPROGRESS = 9
+    UNKNOWN      = 0
+    FAILED       = 1
+    FINISHED     = 2
+    INPROGRESS   = 3
+    SERVER_ERROR = 4
+
+    ACCOUNT_INVALID_PASSWORD = 10
+    ACCOUNT_INVALID_LOGIN    = 11
+    ACCOUNT_BANNED           = 12
+
+    SFA_REQUIRED         = 20
+    SFA_INCORRECT_CODE   = 21
+    SFA_INCORRECT_BACKUP = 22
+
+
 
 WGCInstallDocs = {
     'RU'   : 'https://worldoftanks.ru/ru/wgc/',

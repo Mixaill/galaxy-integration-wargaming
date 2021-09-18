@@ -32,8 +32,8 @@
             
             <section class="main-content">
                 <form id="main-form" class="main-form" action="/login" method="POST">
-                    
-                    <fieldset id="loginFieldset" style="display: none;">
+
+                    <fieldset id="fieldset_login" style="display: none;">
                         <legend>Login with your Wargaming.net account below to access your Wargaming.net games and friends from GOG Galaxy.</legend>
                         <div class="field-group">
                             <label for="step-1-realm">Realm</label>
@@ -52,38 +52,37 @@
                             <label for="step-1-password">Password</label>
                             <input class="basic-input login-input" type="password" id="step-1-password" name="password" disabled="disabled">
                         </div>
-
                     </fieldset>
-                    
-                    <fieldset id="loginErrorFieldset" style="display: none;">
-                        <legend>Login with your Wargaming.net account below to access your Wargaming.net games and friends from GOG Galaxy.</legend>
-                        <div class="field-group">
-                            <label for="step-2-realm">Realm</label>
-                            <select class="basic-input login-input" id="step-2-realm" name="realm" disabled="disabled">
-                                <option>RU</option>
-                                <option>EU</option>
-                                <option>NA</option>
-                                <option>ASIA</option>
-                            </select>
-                        </div>
-                        <div class="field-group">
-                            <label for="step-2-email">Steam email</label>
-                            <input class="basic-input login-input errored" type="email" id="step-2-email" name="email" disabled="disabled" placeholder="name@example.com">
-                        </div>
-                        <div class="field-group relative">
-                            <label for="step-2-password-errored">Password</label>
-                            <input class="basic-input login-input errored" type="password" id="step-2-password-errored" name="password" disabled="disabled">
-                            <div class="show-password"></div>
-                        </div>
+
+                    <fieldset id="fieldset_login_error" style="display: none;">
                         <p class="error-message">
-                            <img src="img/icon-error.svg" alt="" class="error-icon"> You have entered your password or account name incorrectly. Please check your password and account name and try again.
+                            <img src="img/icon-error.svg" alt="" class="error-icon"> Unknown has occurred. Please try again.
                         </p>
                     </fieldset>
 
-                    <fieldset id="twoFactorFieldset" style="display: none;">
+
+                    <fieldset id="fieldset_login_error_logpass" style="display: none;">
+                        <p class="error-message">
+                            <img src="img/icon-error.svg" alt="" class="error-icon"> You have entered your account credentials incorrectly. Please check them and try again.
+                        </p>
+                    </fieldset>
+
+                    <fieldset id="fieldset_login_ban" style="display: none;">
+                        <p class="error-message">
+                            <img src="img/icon-error.svg" alt="" class="error-icon"> Your account was banned.
+                        </p>
+                    </fieldset>
+
+                    <fieldset id="fieldset_server_error" style="display: none;">
+                        <p class="error-message">
+                            <img src="img/icon-error.svg" alt="" class="error-icon"> Some error was occurred on the server. Please try again later.
+                        </p>
+                    </fieldset>
+                    
+                    <fieldset id="fieldset_2fa" style="display: none;">
                         <legend>As an additional security measure, you’ll need to enter the current code from the Authenticator.</legend>
                         <div class="field-group field-group--no-justify">
-                            <label for="step-3-code">Authenticator code</label>
+                            <label for="step-3-authcode">Authenticator code</label>
                             <input class="basic-input two-factor-input" type="text" id="step-3-authcode" name="authcode" disabled="disabled" placeholder="123456">
                         </div>
                         <div class="field-group field-group--no-justify">
@@ -92,20 +91,16 @@
                         </div>
                     </fieldset>
 
-                    <fieldset id="twoFactorErrorFieldset" style="display: none;">
-                        <legend>As an additional security measure, you’ll need to enter the current code from the Authenticator.</legend>
-                        <p class="error-message error-message--centered">
-                            <img src="img/icon-error.svg" alt="" class="error-icon"> Invalid code
+                    <fieldset id="fieldset_2fa_error_code" style="display: none;">
+                        <p class="error-message">
+                            <img src="img/icon-error.svg" alt="" class="error-icon"> Invalid authenticator code
                         </p>
-                        <div class="field-group field-group--no-justify">
-                            <label for="step-4-code">Authenticator code</label>
-                            <input class="basic-input two-factor-input errored" type="text" id="step-4-authcode" name="authcode" disabled="disabled" placeholder="123456">
-                        </div>
+                    </fieldset>
 
-                        <div class="field-group field-group--no-justify">
-                            <input type="checkbox" class="basic-input" name="use_backup" id="step-4-usebackup">
-                            <label for="step-4-usebackup">Use backup code instead of one-time password</label>
-                        </div>
+                    <fieldset id="fieldset_2fa_error_backup" style="display: none;">
+                        <p class="error-message">
+                            <img src="img/icon-error.svg" alt="" class="error-icon"> Invalid backup code
+                        </p>
                     </fieldset>
                 </form>
             </section>
@@ -117,86 +112,99 @@
             </footer>
         </div>
     </div>
-    <script>
-        // Toggling password visibility
 
-        const toggleButton = document.querySelector(".show-password");
-        const input = document.getElementById("step-2-password-errored");
-        function togglePasswordVisibility() {
-            if (input.type === "password") {
-                input.type = "text";
-            } else {
-                input.type = "password"
-            }
-        }
-        toggleButton.addEventListener("click", togglePasswordVisibility);
-
+<script>
         // Handling urlParams, form actions and enabling inputs
-
-        const urlParamsObj = {
-            login: "?view=login",
-            loginErrored: "?view=login&errored=true",
-            twoFactor: "?view=twoFactor",
-            twoFactorErrored: "?view=twoFactor&errored=true"
-        };
-
-        const fieldSetsObj = {
-
-            loginFieldSet: document.querySelector("#loginFieldset"),
-            loginInputs: document.querySelectorAll("#loginFieldset input, #loginFieldset select"),
-
-            loginErrorFieldset: document.querySelector("#loginErrorFieldset"),
-            loginErroredInputs: document.querySelectorAll("#loginErrorFieldset input, #loginErrorFieldset select"),
-
-            twoFactorFieldset: document.querySelector("#twoFactorFieldset"),
-            twoFactorInputs: document.querySelectorAll("#twoFactorFieldset input"),
-
-            twoFactorErrorFieldset: document.querySelector("#twoFactorErrorFieldset"),
-            twoFactorErrorInputs: document.querySelectorAll("#twoFactorErrorFieldset input")
-
-        }
-
-        function handleEnablingInputs(inputs) {
-            for (let i = 0; i < inputs.length; i++) {
-                inputs[i].disabled = false;   
+        const viewStates = [
+            {
+                url: "?view=login",
+                display: [ '#fieldset_login' ],
+                classes: {},
+                inputs: ['#fieldset_login input', '#fieldset_login select'],
+                action: '/login',
+            },
+            {
+                url: "?view=login&subview=error",
+                display: ['#fieldset_login', '#fieldset_login_error'],
+                classes: {  },
+                inputs: ['#fieldset_login input', '#fieldset_login select'],
+                action: '/login',
+            },
+            {
+                url: "?view=login&subview=invalid_login",
+                display: ['#fieldset_login', '#fieldset_login_error_logpass'],
+                classes: {
+                    '#step-1-email': 'errored',
+                    '#step-1-password': 'errored',
+                },
+                inputs: ['#fieldset_login input', '#fieldset_login select'],
+                action: '/login',
+            },
+            {
+                url: "?view=login&subview=ban",
+                display: ['#fieldset_login', '#fieldset_login_ban'],
+                classes: {},
+                inputs: ['#fieldset_login input', '#fieldset_login select'],
+                action: '/login',
+            },
+            {
+                url: "?view=login&subview=server_error",
+                display: ['#fieldset_login', '#fieldset_login_servererror'],
+                classes: {},
+                inputs: ['#fieldset_login input', '#fieldset_login select'],
+                action: '/login',
+            },
+            {
+                url: "?view=2fa",
+                display: ['#fieldset_2fa'],
+                classes: {},
+                inputs: ["#fieldset_2fa input"],
+                action: '/2fa',
+            },
+            {
+                url: "?view=2fa&subview=error_code",
+                display: ['#fieldset_2fa', '#fieldset_2fa_error_code'],
+                classes: {
+                    '#step-3-authcode': 'errored',
+                },
+                inputs: ["#fieldset_2fa input"],
+                action: '/2fa',
+            },
+            {
+                url: "?view=2fa&subview=error_backup",
+                display: ['#fieldset_2fa', '#fieldset_2fa_error_backup'],
+                classes: {
+                    '#step-3-authcode': 'errored',
+                },
+                inputs: ["#fieldset_2fa input"],
+                action: '/2fa',
             }
+        ]
+
+        function onLoad() {
+            viewStates.forEach(element => {
+                if(element['url'] == window.location.search){
+
+                    element['display'].forEach(display_selector => {
+                        document.querySelector(display_selector).style.display = "block";
+                    });
+
+                    for (const [key, value] of Object.entries(element['classes'])) {
+                        document.querySelector(key).classList.add(value);
+                    }
+
+                    element['inputs'].forEach(input_selector => {
+                        document.querySelectorAll(input_selector).forEach(input_element => {
+                            input_element.disabled = false;
+                        });
+                    });
+
+                    document.querySelector("#main-form").action = element["action"];
+                }
+            });
         }
 
-        function handleParamsAndFormAction() {
-            const url = window.location.search;
-            const formElement = document.querySelector("#main-form");
-            const forgotPasswordButtonElement = document.querySelector(".forgot-password");
-
-            switch (url) {
-                //login
-                case urlParamsObj.login:
-                    fieldSetsObj.loginFieldSet.style.display = "block";
-                    handleEnablingInputs(fieldSetsObj.loginInputs);
-                    forgotPasswordButtonElement.style.display = "block";
-                    formElement.action = "/login";
-                    break;
-                case urlParamsObj.loginErrored:
-                    fieldSetsObj.loginErrorFieldset.style.display = "block";
-                    handleEnablingInputs(fieldSetsObj.loginErroredInputs);
-                    forgotPasswordButtonElement.style.display = "block";
-                    formElement.action = "/login";
-                    break;
-                
-                //2FA
-                case urlParamsObj.twoFactor:
-                    fieldSetsObj.twoFactorFieldset.style.display = "block";
-                    handleEnablingInputs(fieldSetsObj.twoFactorInputs);
-                    formElement.action = "/twoFactor";
-                    break;
-                    
-                case urlParamsObj.twoFactorErrored:
-                    fieldSetsObj.twoFactorErrorFieldset.style.display = "block";
-                    handleEnablingInputs(fieldSetsObj.twoFactorErrorInputs);
-                    formElement.action = "/twoFactor";
-                    break;
-            }
-        }
-        window.addEventListener("load", handleParamsAndFormAction);
+        window.addEventListener("load", onLoad);
     </script>
 </body>
 
