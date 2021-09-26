@@ -72,8 +72,12 @@ class WgcAuthServer(MglxWebserver):
         self.__process_auth_result(auth_result)
 
     def __process_auth_result(self, auth_result):
+        if auth_result == WGCAuthorizationResult.CANCELED:
+            raise aiohttp.web.HTTPFound('/?view=canceled')
+
         if auth_result == WGCAuthorizationResult.FINISHED:
             raise aiohttp.web.HTTPFound('/?view=finished')
+
         elif auth_result == WGCAuthorizationResult.SERVER_ERROR: 
             raise aiohttp.web.HTTPFound('/?view=login&subview=server_error')
 

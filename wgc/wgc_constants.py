@@ -9,6 +9,7 @@ class WGCAuthorizationResult(Enum):
     FINISHED     = 2
     INPROGRESS   = 3
     SERVER_ERROR = 4
+    CANCELED     = 5
 
     ACCOUNT_INVALID_PASSWORD = 10
     ACCOUNT_INVALID_LOGIN    = 11

@@ -102,6 +102,14 @@
                             <img src="img/icon-error.svg" alt="" class="error-icon"> Invalid backup code
                         </p>
                     </fieldset>
+
+                    <fieldset id="fieldset_canceled" style="display: none;">
+                        <legend>Login canceled.</legend>
+                    </fieldset>
+
+                    <fieldset id="fieldset_finished" style="display: none;">
+                        <legend>Login finished.</legend>
+                    </fieldset>
                 </form>
             </section>
             <footer class="main-footer">
@@ -178,7 +186,21 @@
                 },
                 inputs: ["#fieldset_2fa input"],
                 action: '/2fa',
-            }
+            },
+            {
+                url: "?view=finished",
+                display: [ '#fieldset_finished' ],
+                classes: {},
+                inputs: [],
+                action: '',
+            },
+            {
+                url: "?view=canceled",
+                display: [ '#fieldset_canceled' ],
+                classes: {},
+                inputs: [],
+                action: '',
+            },
         ]
 
         function onLoad() {

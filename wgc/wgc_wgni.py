@@ -322,6 +322,9 @@ class WgcWgni:
         request authentication challenge and return proof-of-work
         '''
         r = await self.__http.request_get_simple('wgnet', realm, self.OUATH_URL_CHALLENGE)
+        if r.status == 499:
+            self.__logger.warning('__oauth_challenge_get: client closed request')
+            return (WGCAuthorizationResult.CANCELED, r.status, r.text)
         if r.status == 409:
             self.__logger.warning('__oauth_challenge_get: error=%s, content=%s' % (r.status, r.text), exc_info=True)
             return (WGCAuthorizationResult.ACCOUNT_BANNED, r.status, r.text)
