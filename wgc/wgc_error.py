@@ -3,3 +3,6 @@
 
 class MetadataNotFoundError(Exception):
     pass
+
+class MetadataParseError(Exception):
+    pass

@@ -6,7 +6,7 @@ import os
 import xml.etree.ElementTree as ElementTree
 from typing import Dict, List
 
-from .wgc_error import MetadataNotFoundError
+from .wgc_error import MetadataNotFoundError, MetadataParseError
 from .wgc_helper import fixup_gamename
 
 class WgcMetadata:
@@ -16,13 +16,16 @@ class WgcMetadata:
 
     def __init__(self, filepath: str):
         self.__logger = logging.getLogger('wgc_metadata')
-
-        if not os.path.exists(filepath):
-            raise MetadataNotFoundError("WgcMetadata/__init__: %s does not exists" % filepath)
-        
         self.__filepath = filepath
-        self.__root = ElementTree.parse(filepath).getroot()
 
+        if not os.path.exists(self.__filepath):
+            raise MetadataNotFoundError("WgcMetadata/__init__: %s does not exists" % self.__filepath)
+
+        self.__root = None
+        try:
+            self.__root = ElementTree.parse(self.__filepath).getroot()
+        except ElementTree.ParseError:
+            raise MetadataParseError("WgcMetadata/__init__: %s failed to parse" % self.__filepath)        
 
     def get_app_id(self) -> str:
         '''

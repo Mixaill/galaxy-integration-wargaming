@@ -12,7 +12,7 @@ from .wgc_authserver import WgcAuthServer
 from .wgc_application_local import WGCLocalApplication
 from .wgc_application_owned import WGCOwnedApplication, WGCOwnedApplicationInstance
 from .wgc_constants import FALLBACK_COUNTRY, FALLBACK_LANGUAGE, WGCInstallDocs
-from .wgc_error import MetadataNotFoundError
+from .wgc_error import MetadataNotFoundError, MetadataParseError
 from .wgc_gamerestrictions import WGCGameRestrictions
 from .wgc_helper import DETACHED_PROCESS
 from .wgc_http import WgcHttp
@@ -92,6 +92,8 @@ class WGC():
                 apps[app.get_app_id()] = app
             except MetadataNotFoundError:
                 self.__logger.warning('WGC/get_local_applications: Failed to found game metadata from folder %s. ' % app_dir)
+            except MetadataParseError:
+                self.__logger.warning('WGC/get_local_applications: Failed to parse metadata in folder %s. ' % app_dir)
             except PermissionError:
                 self.__logger.warning('WGC/get_local_applications: Failed to get accces to the folder %s. ' % app_dir)
             except Exception:

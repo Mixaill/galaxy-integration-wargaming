@@ -6,9 +6,8 @@ import xml.etree.ElementTree as ElementTree
 from xml.dom import minidom
 from typing import List
 
-#from .wgc_application_owned import WGCOwnedApplicationInstance
 from .wgc_apptype import WgcAppType
-from .wgc_error import MetadataNotFoundError
+from .wgc_error import MetadataNotFoundError, MetadataParseError
 from .wgc_metadata import WgcMetadata
 
 class WgcGameInfo:
@@ -86,12 +85,16 @@ class WgcGameInfo:
 
 
     def __init__(self, filepath: str):
-        
-        if not os.path.exists(filepath):
-            raise MetadataNotFoundError("WgcGameInfo/__init__: %s does not exists" % filepath)
-        
         self.__filepath = filepath
-        self.__root = ElementTree.parse(self.__filepath).getroot()
+
+        if not os.path.exists(self.__filepath):
+            raise MetadataNotFoundError("WgcGameInfo/__init__: %s does not exists" % self.__filepath)
+
+        self.__root = None
+        try:
+            self.__root = ElementTree.parse(self.__filepath).getroot()
+        except ElementTree.ParseError:
+            raise MetadataParseError("WgcGameInfo/__init__: %s failed to parse" % self.__filepath)        
 
 
     def is_installed(self) -> bool:
