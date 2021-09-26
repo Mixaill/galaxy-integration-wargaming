@@ -253,7 +253,10 @@ class WgcWgni:
             use_backup_code)
 
         # process error
-        if token_data_byotp['status_code'] != 200:
+        if token_data_byotp['status_code'] == 499:
+            self.__logger.warning('do_auth_2fa: canceled by user')
+            return WGCAuthorizationResult.CANCELED
+        elif token_data_byotp['status_code'] != 200:
             if 'error_description' in token_data_byotp:
                 error_desc = token_data_byotp['error_description'] 
                 if error_desc == 'twofactor_invalid':
@@ -277,8 +280,12 @@ class WgcWgni:
         '''
 
         token_data_bytoken = await self.__oauth_token_get_bytoken(realm, token_data_input)
-        if not token_data_bytoken:
-            self.__logger.error('do_auth_token: failed to request token by token')
+
+        if token_data_bytoken['status_code'] == 499:
+            self.__logger.warning('do_auth_token: canceled by user')
+            return WGCAuthorizationResult.CANCELED
+        elif token_data_bytoken['status_code'] != 200:
+            self.__logger.error('do_auth_token: failed to request token by token: %s' % token_data_bytoken)
             return WGCAuthorizationResult.FAILED
         
         #generate login info
@@ -415,7 +422,7 @@ class WgcWgni:
         return result
 
 
-    async def __oauth_token_get_bytoken(self, realm, token_data):
+    async def __oauth_token_get_bytoken(self, realm, token_data) -> Dict:
         result = dict()
 
         body = dict()
