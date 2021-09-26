@@ -416,6 +416,8 @@ class WgcWgni:
 
 
     async def __oauth_token_get_bytoken(self, realm, token_data):
+        result = dict()
+
         body = dict()
         body['access_token'] = token_data['access_token']
         body['grant_type'] = self.OAUTH_GRANT_TYPE_BYTOKEN
@@ -424,13 +426,18 @@ class WgcWgni:
         body['tid'] = self.__tracking_id
 
         response = await self.__http.request_post_simple('wgnet', realm, self.OAUTH_URL_TOKEN, data = body)
+        result['status_code'] = 499
 
-        if response.status != 200:
+        if response.status == 499:
+            self.__logger.warning('__oauth_token_get_bytoken: user canceled the auth process, status=%s' % response.status)
+            return result
+        elif response.status != 200:
             self.__logger.error('__oauth_token_get_bytoken: error on receiving token by token: %s because status is %s' % (response.text, response.status))
-            return None
+            return result
 
         result = json.loads(response.text)
         result['exchange_code'] = body['exchange_code']
+        result['status_code'] = response.status
 
         return result
 
