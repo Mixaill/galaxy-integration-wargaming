@@ -122,7 +122,7 @@ class WgcWgni:
         wgni_account_info = await self.__request_account_info()
 
         if wgni_account_info is None:
-            self.__logger.error('login_info_set: failed to get account info')
+            self.__logger.warning('login_info_set: failed to get account info')
             return False
 
         if wgni_account_info['sub'] != login_info['user']:
@@ -148,7 +148,10 @@ class WgcWgni:
             'wgnet', self.__login_info['realm'], self.WGNI_URL_ACCOUNTINFO, 
             data = { 'fields' : 'nickname' })
         
-        if response.status == 499:
+        if response.status == 401:
+            self.__logger.warning('__request_account_info: unathorized')
+            return None
+        elif response.status == 499:
             self.__logger.warning('__request_account_info: client closed request')
             return None
         elif response.status == 502:
