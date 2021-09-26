@@ -394,10 +394,14 @@ class WgcWgni:
                 body['otp_code'] = otp_code
 
         response = await self.__http.request_post_simple('wgnet', realm, self.OAUTH_URL_TOKEN, data = body)
-                
+        result['status_code'] = response.status
+
+        if response.status == 499:
+            self.__logger.warning('__oauth_token_get_bypassword: user canceled the auth process, status=%s' % response.status)
+            return result
+
         if response.text is None:
-            self.__logger.error('__oauth_token_get_bypassword: response.text is None, satus=%s' % response.status)
-            result['status_code'] = 0
+            self.__logger.error('__oauth_token_get_bypassword: response.text is None, status=%s' % response.status)
             return result
 
         try:
