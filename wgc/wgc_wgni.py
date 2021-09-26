@@ -148,7 +148,10 @@ class WgcWgni:
             'wgnet', self.__login_info['realm'], self.WGNI_URL_ACCOUNTINFO, 
             data = { 'fields' : 'nickname' })
         
-        if response.status == 502:
+        if response.status == 499:
+            self.__logger.warning('__request_account_info: client closed request')
+            return None
+        elif response.status == 502:
             self.__logger.warning('__request_account_info: error on retrieving account info: %s, %s' % (response.status, response.text), exc_info=True)
             return None
         elif response.status != 200:
