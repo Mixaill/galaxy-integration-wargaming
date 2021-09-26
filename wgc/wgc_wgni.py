@@ -190,7 +190,7 @@ class WgcWgni:
         #calculate proof of work
         pow_number = await self.__oauth_challenge_calculate(challenge_data)
         if not pow_number:
-            self.__logger.error('do_auth_emailpass: failed to calculate challenge')
+            self.__logger.error('do_auth_emailpass: failed to calculate challenge', exc_info = True)
             return WGCAuthorizationResult.FAILED
         self.__login_info_temp['pow_number'] = pow_number
 
