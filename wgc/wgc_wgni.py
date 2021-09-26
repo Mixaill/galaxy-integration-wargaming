@@ -180,6 +180,9 @@ class WgcWgni:
         if challenge_status == WGCAuthorizationResult.SERVER_ERROR:
             self.__logger.warning('do_auth_emailpass: failed to get challenge because of server error')
             return challenge_status  
+        if challenge_status == WGCAuthorizationResult.CANCELED:
+            self.__logger.warning('do_auth_emailpass: user canceled the auth process')
+            return challenge_status
         elif challenge_status != WGCAuthorizationResult.INPROGRESS:
             self.__logger.error('do_auth_emailpass: failed to get challenge, status=%s, code=%s, data=%s' % (challenge_status, challenge_code, challenge_data))
             return challenge_status
