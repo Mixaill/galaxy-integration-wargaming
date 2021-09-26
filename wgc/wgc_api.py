@@ -91,11 +91,13 @@ class WgcApi:
             'wgcps', self.__wgni.get_account_realm(), self.WGCPS_FETCH_PRODUCT_INFO, 
             json = { 'account_id' : self.__wgni.get_account_id(), 'country' : self._country_code, 'storefront' : 'wgc_showcase' })
 
-        if response.status == 502:
+        if response.status == 499:
+            self.__logger.warning('__wgcps_fetch_product_list: failed to get data: client closed')
+            return None
+        elif response.status == 502:
             self.__logger.warning('__wgcps_fetch_product_list: failed to get data: bad gateway')
             return None
-
-        if response.status == 504:
+        elif response.status == 504:
             self.__logger.warning('__wgcps_fetch_product_list: failed to get data: gateway timeout')
             return None
 
