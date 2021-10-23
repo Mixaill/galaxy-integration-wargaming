@@ -154,11 +154,11 @@ class WgcApi:
     # 
 
     async def fetch_app_metadata(self, update_server: str, app_id: str) -> str:
-        url = '%s/%s/?guid=%s&chain_id=unknown&protocol_version=6.9' % (update_server, self.WGUS_METADATA, app_id)
+        url = '%s/%s/?guid=%s&chain_id=unknown&protocol_version=7.2' % (update_server, self.WGUS_METADATA, app_id)
         
         response = await self.__http.request_get(url) 
         if response.status != 200:
-            self.__logger.error('fetch_app_metadata: error on retrieving showroom data: (%s, %s)' % (url, response.text))
+            self.__logger.error('fetch_app_metadata: error on retrieving metadata: url=%s, response=%s)' % (url, response.text))
             return None
 
         return response.text
