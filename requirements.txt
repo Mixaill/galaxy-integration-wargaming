@@ -1,5 +1,5 @@
 aiohttp == 3.7.4.post0
-certifi == 2021.10.8
+certifi == 2022.12.7
 galaxy.plugin.api == 0.68
 galaxyutils == 0.1.5
 psutil == 5.8.0
