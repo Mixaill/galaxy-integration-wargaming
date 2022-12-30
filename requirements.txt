@@ -4,4 +4,4 @@ galaxy.plugin.api == 0.68
 galaxyutils == 0.1.5
 psutil == 5.8.0
 sentry_sdk == 1.4.3
-slixmpp == 1.7.1
+slixmpp == 1.8.3
